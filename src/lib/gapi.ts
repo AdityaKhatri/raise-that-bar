@@ -77,8 +77,9 @@ export function initiateOAuthRedirect(
   localStorage.setItem(OAUTH_STATE_KEY, state);
   localStorage.setItem(OAUTH_INTENT_KEY, intent);
 
-  // redirect_uri must exactly match an Authorized Redirect URI in Google Cloud Console
-  const redirectUri = `${window.location.origin}${window.location.pathname}`;
+  // Use BASE_URL (set by Vite) so the URI is always consistent regardless of
+  // current pathname — PWA standalone mode can differ from browser pathname.
+  const redirectUri = `${window.location.origin}${import.meta.env.BASE_URL}`;
 
   const params = new URLSearchParams({
     client_id: clientId,
