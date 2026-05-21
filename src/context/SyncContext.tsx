@@ -1,5 +1,5 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
-import { getSyncMeta, setSyncMeta } from '../db/meta';
+import { getSyncMeta, setSyncMeta, setOnboardingDone } from '../db/meta';
 import { exportToBackup, mergeFromBackup } from '../lib/sync';
 import {
   requestToken,
@@ -7,8 +7,12 @@ import {
   findBackupFile,
   downloadBackup,
   uploadBackup,
+  isIosPwa,
+  initiateOAuthRedirect,
+  consumeOAuthRedirectToken,
 } from '../lib/gapi';
 import type { SyncMeta } from '../db/meta';
+import type { OAuthIntent } from '../lib/gapi';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,7 +50,6 @@ async function getToken(silent: boolean): Promise<string> {
   if (!CLIENT_ID) throw new Error('VITE_GOOGLE_CLIENT_ID is not configured');
   const token = await requestToken(CLIENT_ID, SCOPE, silent);
   cachedToken = token;
-  // Clear cache after 55 minutes (tokens last 60 min)
   setTimeout(() => { cachedToken = null; }, 55 * 60 * 1000);
   return token;
 }
@@ -59,20 +62,72 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
     error: null,
   });
 
-  // Load persisted sync state on mount; clear any in-memory token so the
-  // next operation always fetches one with the full scope set.
   useEffect(() => {
     cachedToken = null;
-    getSyncMeta().then(meta => {
-      if (meta) {
+
+    // Check for OAuth redirect return (iOS PWA flow) before loading DB state.
+    // consumeOAuthRedirectToken() is synchronous — reads URL hash + localStorage
+    // and immediately cleans them up so a reload won't reprocess.
+    const redirectResult = consumeOAuthRedirectToken();
+
+    getSyncMeta().then(async meta => {
+      if (meta && !redirectResult) {
+        // Normal load — restore persisted account
         setState(s => ({
           ...s,
           account: { email: meta.email, name: meta.name },
           lastSync: meta.lastSync,
         }));
       }
+
+      if (redirectResult) {
+        // Returning from iOS PWA OAuth redirect — complete the flow
+        await completeAfterRedirect(redirectResult.token, redirectResult.intent);
+      }
     });
-  }, []);
+  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+
+  // Handles the post-redirect auth completion for both 'connect' and 'restore'.
+  async function completeAfterRedirect(token: string, intent: OAuthIntent) {
+    try {
+      setState(s => ({ ...s, syncing: true, error: null }));
+      cachedToken = token;
+
+      const userInfo = await getUserInfo(token);
+      const now = Date.now();
+
+      if (intent === 'restore') {
+        const fileId = await findBackupFile(token);
+        if (fileId) {
+          const backupData = await downloadBackup(token, fileId);
+          await mergeFromBackup(backupData as Parameters<typeof mergeFromBackup>[0]);
+        }
+        // Upload whatever we have (merged or fresh) and mark onboarding done
+        const backup = await exportToBackup();
+        const existingId = await findBackupFile(token);
+        await uploadBackup(token, backup, existingId);
+        await setSyncMeta({ email: userInfo.email, name: userInfo.name, lastSync: now });
+        await setOnboardingDone();
+        // Reload so App.tsx re-reads onboarding_done from DB and shows main app
+        window.location.reload();
+      } else {
+        // connect — just link the account and upload current data
+        const backup = await exportToBackup();
+        const existingId = await findBackupFile(token);
+        await uploadBackup(token, backup, existingId);
+        await setSyncMeta({ email: userInfo.email, name: userInfo.name, lastSync: now });
+        setState(s => ({
+          ...s,
+          account: { email: userInfo.email, name: userInfo.name },
+          syncing: false,
+          lastSync: now,
+        }));
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : String(err);
+      setState(s => ({ ...s, syncing: false, error: `Auth failed: ${msg}` }));
+    }
+  }
 
   const clearError = useCallback(() => {
     setState(s => ({ ...s, error: null }));
@@ -80,36 +135,26 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
   const connect = useCallback(async () => {
     if (!CLIENT_ID) {
-      setState(s => ({ ...s, error: 'Google Drive sync is not configured (missing client ID).' }));
+      setState(s => ({ ...s, error: 'Google Drive sync is not configured.' }));
       return;
+    }
+    // iOS PWA: popup won't work — use full-page redirect instead
+    if (isIosPwa()) {
+      initiateOAuthRedirect(CLIENT_ID, SCOPE, 'connect');
+      return; // page navigates away
     }
     try {
       setState(s => ({ ...s, syncing: true, error: null }));
-      cachedToken = null; // force fresh token with user consent
+      cachedToken = null;
       const token = await getToken(false);
       const userInfo = await getUserInfo(token);
-
-      const meta: SyncMeta = {
-        email: userInfo.email,
-        name: userInfo.name,
-        lastSync: null,
-      };
+      const meta: SyncMeta = { email: userInfo.email, name: userInfo.name, lastSync: null };
       await setSyncMeta(meta);
-
-      setState(s => ({
-        ...s,
-        account: { email: userInfo.email, name: userInfo.name },
-        syncing: false,
-      }));
-
-      // Auto-sync after connecting
+      setState(s => ({ ...s, account: { email: userInfo.email, name: userInfo.name }, syncing: false }));
       await syncNowInternal(token);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      const friendly = msg === 'IOS_PWA_POPUP_BLOCKED'
-        ? 'ios_pwa'
-        : `Connect failed: ${msg}`;
-      setState(s => ({ ...s, syncing: false, error: friendly }));
+      setState(s => ({ ...s, syncing: false, error: `Connect failed: ${msg}` }));
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 
@@ -120,7 +165,6 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       const backup = await exportToBackup();
       const existingFileId = await findBackupFile(t);
       await uploadBackup(t, backup, existingFileId);
-
       const now = Date.now();
       setState(s => {
         const updatedMeta: SyncMeta | null = s.account
@@ -147,8 +191,13 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
   const restoreFromDrive = useCallback(async () => {
     if (!CLIENT_ID) {
-      setState(s => ({ ...s, error: 'Google Drive sync is not configured (missing client ID).' }));
+      setState(s => ({ ...s, error: 'Google Drive sync is not configured.' }));
       throw new Error('Drive sync not configured');
+    }
+    // iOS PWA: popup won't work — use full-page redirect instead
+    if (isIosPwa()) {
+      initiateOAuthRedirect(CLIENT_ID, SCOPE, 'restore');
+      return; // page navigates away
     }
     try {
       setState(s => ({ ...s, syncing: true, error: null }));
@@ -158,25 +207,17 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
       const fileId = await findBackupFile(token);
       if (!fileId) {
-        // No backup found — just save the account and return
         const meta: SyncMeta = { email: userInfo.email, name: userInfo.name, lastSync: null };
         await setSyncMeta(meta);
-        setState(s => ({
-          ...s,
-          account: { email: userInfo.email, name: userInfo.name },
-          syncing: false,
-          error: null,
-        }));
+        setState(s => ({ ...s, account: { email: userInfo.email, name: userInfo.name }, syncing: false }));
         return;
       }
 
       const backupData = await downloadBackup(token, fileId);
       await mergeFromBackup(backupData as Parameters<typeof mergeFromBackup>[0]);
-
       const now = Date.now();
       const meta: SyncMeta = { email: userInfo.email, name: userInfo.name, lastSync: now };
       await setSyncMeta(meta);
-
       setState(s => ({
         ...s,
         account: { email: userInfo.email, name: userInfo.name },
@@ -186,8 +227,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       }));
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      const friendly = msg === 'IOS_PWA_POPUP_BLOCKED' ? 'ios_pwa' : `Restore failed: ${msg}`;
-      setState(s => ({ ...s, syncing: false, error: friendly }));
+      setState(s => ({ ...s, syncing: false, error: `Restore failed: ${msg}` }));
       throw err;
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps

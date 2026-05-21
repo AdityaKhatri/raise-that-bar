@@ -370,10 +370,7 @@ function SettingsSection() {
                 </div>
                 {error && (
                   <div className="profile-sync-error">
-                    <span>{error === 'ios_pwa'
-                      ? 'Sign-in can\'t open a popup in the installed app. Tap ··· → Open in Safari, sign in there, then come back.'
-                      : error}
-                    </span>
+                    <span>{error}</span>
                     <button className="btn ghost btn-sm" onClick={clearError}>✕</button>
                   </div>
                 )}
@@ -394,15 +391,6 @@ function SettingsSection() {
                   </button>
                 </div>
               </>
-            ) : error === 'ios_pwa' ? (
-              <div className="profile-field last" style={{ flexDirection: 'column', alignItems: 'flex-start', gap: 10 }}>
-                <div style={{ fontFamily: 'var(--mono)', fontSize: 12, color: 'var(--fg)', marginBottom: 2 }}>Google Drive</div>
-                <div style={{ fontSize: 13, color: 'var(--fg-dim)', lineHeight: 1.5 }}>
-                  Sign-in requires a popup that the installed app can't open.<br />
-                  Open IronLog in Safari first (tap <strong style={{ color: 'var(--fg)' }}>Share → Open in Safari</strong>), connect Drive there, then return here.
-                </div>
-                <button className="btn ghost btn-sm" onClick={clearError} style={{ color: 'var(--fg-mute)', marginTop: 2 }}>Dismiss</button>
-              </div>
             ) : (
               <div className="profile-field last">
                 <div style={{ flex: 1 }}>

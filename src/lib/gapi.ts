@@ -53,6 +53,69 @@ export function isIosPwa(): boolean {
   );
 }
 
+// ─── OAuth redirect flow (iOS PWA) ───────────────────────────────────────────
+//
+// GIS uses window.open() (popup) which is broken in iOS PWA standalone mode.
+// Instead, we do a full-page redirect to Google OAuth. On return, Google
+// redirects back to the app URL with #access_token=... in the hash.
+// iOS 16.4+ reopens the installed PWA URL in the same PWA context.
+
+const OAUTH_STATE_KEY  = 'iron_log_oauth_state';
+const OAUTH_INTENT_KEY = 'iron_log_oauth_intent';
+
+export type OAuthIntent = 'connect' | 'restore';
+
+export function initiateOAuthRedirect(
+  clientId: string,
+  scopes: string,
+  intent: OAuthIntent,
+): void {
+  // CSRF state token
+  const state = Array.from(crypto.getRandomValues(new Uint8Array(16)))
+    .map(b => b.toString(16).padStart(2, '0'))
+    .join('');
+  localStorage.setItem(OAUTH_STATE_KEY, state);
+  localStorage.setItem(OAUTH_INTENT_KEY, intent);
+
+  // redirect_uri must exactly match an Authorized Redirect URI in Google Cloud Console
+  const redirectUri = `${window.location.origin}${window.location.pathname}`;
+
+  const params = new URLSearchParams({
+    client_id: clientId,
+    redirect_uri: redirectUri,
+    response_type: 'token',
+    scope: scopes,
+    state,
+    include_granted_scopes: 'true',
+  });
+
+  window.location.href = `https://accounts.google.com/o/oauth2/v2/auth?${params}`;
+}
+
+/**
+ * Call once on app mount. Checks if the current URL contains an OAuth redirect
+ * result. If so, validates the CSRF state, cleans the URL, and returns the
+ * token + original intent. Returns null if this is not a post-redirect load.
+ */
+export function consumeOAuthRedirectToken(): { token: string; intent: OAuthIntent } | null {
+  const hash = window.location.hash.slice(1);
+  if (!hash || !hash.includes('access_token')) return null;
+
+  const params    = new URLSearchParams(hash);
+  const token     = params.get('access_token');
+  const retState  = params.get('state');
+  const savedState  = localStorage.getItem(OAUTH_STATE_KEY);
+  const intent    = localStorage.getItem(OAUTH_INTENT_KEY) as OAuthIntent | null;
+
+  // Clean up regardless so we don't re-process on reload
+  history.replaceState(null, '', window.location.pathname);
+  localStorage.removeItem(OAUTH_STATE_KEY);
+  localStorage.removeItem(OAUTH_INTENT_KEY);
+
+  if (!token || retState !== savedState) return null;
+  return { token, intent: intent ?? 'connect' };
+}
+
 // ─── Script loading ───────────────────────────────────────────────────────────
 
 let gisLoadPromise: Promise<void> | null = null;
@@ -90,9 +153,6 @@ export async function requestToken(
   scopes: string,
   silent: boolean,
 ): Promise<string> {
-  if (!silent && isIosPwa()) {
-    throw new Error('IOS_PWA_POPUP_BLOCKED');
-  }
   await loadGis();
 
   return new Promise<string>((resolve, reject) => {
