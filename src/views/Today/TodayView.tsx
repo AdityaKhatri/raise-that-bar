@@ -37,7 +37,7 @@ function templateToSessionGroups(workout: Workout): SessionGroup[] {
         completed: false,
         weight: b.targetWeight ?? null,
         reps: b.targetReps ? parseInt(b.targetReps) || null : null,
-        time: null,
+        time: b.targetTime ?? null,
         distance: null,
         rpe: null,
         notes: '',
@@ -232,14 +232,25 @@ function PlannedWorkoutCard({ workoutId, note, doneSession, onStart, onEdit }: {
 
 // ─── Active Session View ──────────────────────────────────────────────────────
 
+function isTimeBased(ex: Exercise | undefined): boolean {
+  return ex?.defaultUnit === 'sec' || ex?.defaultUnit === 'min';
+}
+
 function ActiveSessionView() {
   const { session, updateSession, finishSession, discardSession } = useActiveSession();
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [pickerGroupId, setPickerGroupId] = useState<string | null>(null);
   const [justDoneKeys, setJustDoneKeys] = useState<Set<string>>(new Set());
+  const [exerciseMap, setExerciseMap] = useState<Map<string, Exercise>>(new Map());
 
   const isEditing = session?.finishedAt !== null && session?.finishedAt !== undefined;
+
+  useEffect(() => {
+    getAllExercises().then(all => {
+      setExerciseMap(new Map(all.map(e => [e.id, e])));
+    });
+  }, []);
 
   useEffect(() => {
     if (!session) return;
@@ -293,11 +304,13 @@ function ActiveSessionView() {
         blocks: g.blocks.map(b => {
           if (b.id !== blockId) return b;
           const lastSet = b.sets[b.sets.length - 1];
+          const timeBased = isTimeBased(exerciseMap.get(b.exerciseId));
           const newSet: SessionSet = {
             completed: false,
             weight: lastSet?.weight ?? null,
-            reps: lastSet?.reps ?? null,
-            time: null, distance: null, rpe: null, notes: '',
+            reps: timeBased ? null : (lastSet?.reps ?? null),
+            time: timeBased ? (lastSet?.time ?? null) : null,
+            distance: null, rpe: null, notes: '',
           };
           return { ...b, sets: [...b.sets, newSet] };
         }),
@@ -373,7 +386,10 @@ function ActiveSessionView() {
                 <span className="gmeta">{completedCount}/{totalCount} sets</span>
               </div>
 
-              {group.blocks.map(block => (
+              {group.blocks.map(block => {
+                const ex = exerciseMap.get(block.exerciseId);
+                const timeBased = isTimeBased(ex);
+                return (
                 <div key={block.id} className="block">
                   <div className="block-head">
                     <span className="block-name">{block.exerciseName}</span>
@@ -383,7 +399,7 @@ function ActiveSessionView() {
                   <div className="set-row head">
                     <span></span>
                     <span>Weight</span>
-                    <span>Reps</span>
+                    <span>{timeBased ? 'Time (s)' : 'Reps'}</span>
                     <span></span>
                   </div>
 
@@ -406,15 +422,27 @@ function ActiveSessionView() {
                             weight: e.target.value ? parseFloat(e.target.value) : null,
                           })}
                         />
-                        <input
-                          className="num-input"
-                          type="number"
-                          placeholder="—"
-                          value={set.reps ?? ''}
-                          onChange={e => updateSet(group.id, block.id, si, {
-                            reps: e.target.value ? parseInt(e.target.value) : null,
-                          })}
-                        />
+                        {timeBased ? (
+                          <input
+                            className="num-input"
+                            type="number"
+                            placeholder="—"
+                            value={set.time ?? ''}
+                            onChange={e => updateSet(group.id, block.id, si, {
+                              time: e.target.value ? parseInt(e.target.value) : null,
+                            })}
+                          />
+                        ) : (
+                          <input
+                            className="num-input"
+                            type="number"
+                            placeholder="—"
+                            value={set.reps ?? ''}
+                            onChange={e => updateSet(group.id, block.id, si, {
+                              reps: e.target.value ? parseInt(e.target.value) : null,
+                            })}
+                          />
+                        )}
                         <button
                           className="complete-btn"
                           onClick={() => toggleComplete(group.id, block.id, si, isDone)}
@@ -437,7 +465,8 @@ function ActiveSessionView() {
                     Add Set
                   </button>
                 </div>
-              ))}
+                );
+              })}
 
               <button
                 className="add-block"
