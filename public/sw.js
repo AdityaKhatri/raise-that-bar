@@ -1,41 +1,26 @@
-const CACHE_VERSION = 'iron-log-v3';
-const BASE = '/iron-log';
+const CACHE = 'iron-log-v5';
 
 const SHELL = [
-  BASE + '/',
-  BASE + '/index.html',
-  BASE + '/manifest.webmanifest',
-  BASE + '/icons/logo.svg',
-  BASE + '/icons/icon-180.png',
-  BASE + '/icons/icon-192.png',
-  BASE + '/icons/icon-512.png',
+  '/iron-log/',
+  '/iron-log/index.html',
+  '/iron-log/manifest.webmanifest',
 ];
 
-// ── Install: cache shell ──────────────────────────────────────────────────────
+// ── Install ───────────────────────────────────────────────────────────────────
 self.addEventListener('install', e => {
-  e.waitUntil(
-    caches.open(CACHE_VERSION).then(cache => cache.addAll(SHELL))
-  );
-  // Do NOT skipWaiting here — let the app prompt the user first.
+  e.waitUntil(caches.open(CACHE).then(c => c.addAll(SHELL)));
+  self.skipWaiting(); // activate immediately — network-first HTML handles safe updates
 });
 
-// ── Message: app triggers skipWaiting after user confirms update ──────────────
-self.addEventListener('message', e => {
-  if (e.data?.type === 'SKIP_WAITING') self.skipWaiting();
-});
-
-// ── Activate: prune old caches ────────────────────────────────────────────────
+// ── Activate: prune old caches, claim all clients ─────────────────────────────
 self.addEventListener('activate', e => {
   e.waitUntil(
-    caches.keys().then(keys =>
-      Promise.all(
-        keys
-          .filter(k => k.startsWith('iron-log-') && k !== CACHE_VERSION)
-          .map(k => caches.delete(k))
-      )
-    )
+    caches.keys()
+      .then(keys => Promise.all(
+        keys.filter(k => k.startsWith('iron-log-') && k !== CACHE).map(k => caches.delete(k))
+      ))
+      .then(() => self.clients.claim())
   );
-  self.clients.claim();
 });
 
 // ── Fetch ─────────────────────────────────────────────────────────────────────
@@ -44,27 +29,39 @@ self.addEventListener('fetch', e => {
 
   const url = new URL(e.request.url);
 
-  // Pass through cross-origin requests (Google APIs, OAuth, CDNs) — no caching
+  // Pass through all cross-origin requests (Google APIs, YouTube, CDNs)
   if (url.origin !== self.location.origin) return;
 
-  // Cache-first for same-origin app assets
-  e.respondWith(
-    caches.match(e.request).then(cached => {
-      if (cached) return cached;
+  // Vite hashed assets (/assets/*.js, /assets/*.css) — cache-first.
+  // These filenames are content-addressed so old ones never collide with new ones.
+  if (url.pathname.includes('/assets/')) {
+    e.respondWith(
+      caches.match(e.request).then(cached =>
+        cached || fetch(e.request).then(r => {
+          if (r.ok) caches.open(CACHE).then(c => c.put(e.request, r.clone()));
+          return r;
+        })
+      )
+    );
+    return;
+  }
 
-      return fetch(e.request).then(response => {
-        if (response.ok) {
-          const clone = response.clone();
-          caches.open(CACHE_VERSION).then(cache => cache.put(e.request, clone));
-        }
-        return response;
-      }).catch(() => {
-        // Offline fallback: return app shell for page navigations
-        if (e.request.mode === 'navigate') {
-          return caches.match(BASE + '/index.html');
-        }
-        return new Response('Offline', { status: 503, statusText: 'Service Unavailable' });
-      });
-    })
+  // Everything else (index.html, manifest, icons, library.csv, …) — network-first.
+  // This ensures a fresh index.html is always served when online, so deploys
+  // are picked up on the next page open without any manual refresh prompt.
+  e.respondWith(
+    fetch(e.request)
+      .then(r => {
+        if (r.ok) caches.open(CACHE).then(c => c.put(e.request, r.clone()));
+        return r;
+      })
+      .catch(() =>
+        caches.match(e.request).then(cached =>
+          cached ||
+          (e.request.mode === 'navigate'
+            ? caches.match('/iron-log/index.html')
+            : new Response('Offline', { status: 503, statusText: 'Service Unavailable' }))
+        )
+      )
   );
 });

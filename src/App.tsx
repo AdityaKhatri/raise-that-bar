@@ -47,51 +47,9 @@ function SplashScreen() {
   );
 }
 
-// ─── SW update detection ──────────────────────────────────────────────────────
-
-function useUpdatePrompt() {
-  const [waitingSW, setWaitingSW] = useState<ServiceWorker | null>(null);
-
-  useEffect(() => {
-    if (!('serviceWorker' in navigator)) return;
-
-    navigator.serviceWorker.getRegistration().then(reg => {
-      if (!reg) return;
-
-      // Already a waiting SW when we open (e.g. user had the tab open during deploy)
-      if (reg.waiting) setWaitingSW(reg.waiting);
-
-      // New SW finishes installing while the app is open
-      reg.addEventListener('updatefound', () => {
-        const newSW = reg.installing;
-        if (!newSW) return;
-        newSW.addEventListener('statechange', () => {
-          if (newSW.state === 'installed' && navigator.serviceWorker.controller) {
-            setWaitingSW(newSW);
-          }
-        });
-      });
-    });
-
-    // When skipWaiting completes the controller changes — reload to pick up new assets
-    let refreshing = false;
-    navigator.serviceWorker.addEventListener('controllerchange', () => {
-      if (!refreshing) { refreshing = true; window.location.reload(); }
-    });
-  }, []);
-
-  function applyUpdate() {
-    if (!waitingSW) return;
-    waitingSW.postMessage({ type: 'SKIP_WAITING' });
-  }
-
-  return { updateAvailable: !!waitingSW, applyUpdate };
-}
-
 // ─── App ──────────────────────────────────────────────────────────────────────
 
 export function App() {
-  const { updateAvailable, applyUpdate } = useUpdatePrompt();
   const [onboardingDone, setOnboardingDoneState] = useState<boolean | null>(null);
   const [view, setView] = useState<ViewId>('today');
   const [importState, setImportState] = useState<{
@@ -102,6 +60,16 @@ export function App() {
 
   useEffect(() => {
     getOnboardingDone().then(done => setOnboardingDoneState(done));
+  }, []);
+
+  // Auto-reload when a new SW takes over (skipWaiting fires in sw.js on install)
+  useEffect(() => {
+    if (!('serviceWorker' in navigator)) return;
+    const hadController = !!navigator.serviceWorker.controller;
+    let reloading = false;
+    navigator.serviceWorker.addEventListener('controllerchange', () => {
+      if (hadController && !reloading) { reloading = true; window.location.reload(); }
+    });
   }, []);
 
   // Detect #import= fragment and prepare the confirmation sheet
@@ -160,45 +128,6 @@ export function App() {
           {view === 'editor'   && <ExerciseEditorView onBack={() => setView('library')} />}
         </main>
         <ConditionalNav current={navView} onChange={setView} />
-
-        {/* Update available banner */}
-        {updateAvailable && (
-          <div style={{
-            position: 'fixed',
-            top: 'env(safe-area-inset-top, 0px)',
-            left: 0, right: 0,
-            background: 'var(--accent)',
-            color: '#fff',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            padding: '10px 16px',
-            fontFamily: 'var(--mono)',
-            fontSize: 12,
-            fontWeight: 600,
-            letterSpacing: '0.06em',
-            zIndex: 500,
-          }}>
-            <span>New version available</span>
-            <button
-              onClick={applyUpdate}
-              style={{
-                background: '#fff',
-                color: 'var(--accent)',
-                border: 'none',
-                borderRadius: 3,
-                padding: '4px 10px',
-                fontFamily: 'var(--mono)',
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: '0.08em',
-                cursor: 'pointer',
-              }}
-            >
-              REFRESH
-            </button>
-          </div>
-        )}
 
         {/* Import confirmation sheet */}
         {importState && (
