@@ -10,6 +10,7 @@ import { SearchBar } from '../../components/SearchBar/SearchBar';
 import { CategoryIcon, CATEGORY_COLOR, CATEGORY_LABEL } from '../../components/CategoryIcon/CategoryIcon';
 import { LogoMark, LogoFull } from '../../components/Logo/Logo';
 import { today, formatDisplayDate, formatDuration } from '../../lib/date';
+import { extractYouTubeId } from '../../lib/youtube';
 import { uid } from '../../lib/ids';
 import type { Session, SessionGroup, SessionBlock, SessionSet, Workout, Exercise } from '../../types';
 import './Today.css';
@@ -233,7 +234,32 @@ function PlannedWorkoutCard({ workoutId, note, doneSession, onStart, onEdit }: {
 // ─── Active Session View ──────────────────────────────────────────────────────
 
 function isTimeBased(ex: Exercise | undefined): boolean {
-  return ex?.defaultUnit === 'sec' || ex?.defaultUnit === 'min';
+  if (!ex) return false;
+  if (ex.defaultUnit === 'sec' || ex.defaultUnit === 'min') return true;
+  if (ex.category === 'cardio' || ex.category === 'stretching') return true;
+  return false;
+}
+
+function formatTime(secs: number): string {
+  if (secs >= 60) {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return s > 0 ? `${m}m ${s}s` : `${m}m`;
+  }
+  return `${secs}s`;
+}
+
+function prescriptionLabel(block: SessionBlock, ex?: Exercise): string {
+  const n = block.sets.length;
+  const first = block.sets[0];
+  if (!first) return `${n} set${n !== 1 ? 's' : ''}`;
+  if (isTimeBased(ex)) {
+    const t = first.time != null ? formatTime(first.time) : '?';
+    return `${n} × ${t}`;
+  }
+  const reps = first.reps != null ? first.reps : '?';
+  const weight = first.weight != null ? ` @ ${first.weight}kg` : '';
+  return `${n} × ${reps}${weight}`;
 }
 
 function ActiveSessionView() {
@@ -241,8 +267,10 @@ function ActiveSessionView() {
   const [confirmDiscard, setConfirmDiscard] = useState(false);
   const [elapsed, setElapsed] = useState(0);
   const [pickerGroupId, setPickerGroupId] = useState<string | null>(null);
-  const [justDoneKeys, setJustDoneKeys] = useState<Set<string>>(new Set());
   const [exerciseMap, setExerciseMap] = useState<Map<string, Exercise>>(new Map());
+  const [expandedBlock, setExpandedBlock] = useState<string | null>(null);
+  const [showAllSetsFor, setShowAllSetsFor] = useState<string | null>(null);
+  const [miniVideoUrl, setMiniVideoUrl] = useState<string | null>(null);
 
   const isEditing = session?.finishedAt !== null && session?.finishedAt !== undefined;
 
@@ -266,6 +294,11 @@ function ActiveSessionView() {
   const mins = Math.floor(elapsed / 60000);
   const secs = Math.floor((elapsed % 60000) / 1000);
 
+  // Overall progress
+  const totalSets = s.groups.reduce((a, g) => a + g.blocks.reduce((b, bl) => b + bl.sets.length, 0), 0);
+  const doneSets = s.groups.reduce((a, g) => a + g.blocks.reduce((b, bl) => b + bl.sets.filter(st => st.completed).length, 0), 0);
+  const progress = totalSets > 0 ? doneSets / totalSets : 0;
+
   function updateSet(groupId: string, blockId: string, setIndex: number, patch: Partial<SessionSet>) {
     const groups = s.groups.map(g => {
       if (g.id !== groupId) return g;
@@ -279,21 +312,6 @@ function ActiveSessionView() {
       };
     });
     updateSession({ ...s, groups });
-  }
-
-  function toggleComplete(groupId: string, blockId: string, setIndex: number, current: boolean) {
-    const key = `${groupId}-${blockId}-${setIndex}`;
-    updateSet(groupId, blockId, setIndex, { completed: !current });
-    if (!current) {
-      setJustDoneKeys(prev => new Set(prev).add(key));
-      setTimeout(() => {
-        setJustDoneKeys(prev => {
-          const next = new Set(prev);
-          next.delete(key);
-          return next;
-        });
-      }, 200);
-    }
   }
 
   function addSet(groupId: string, blockId: string) {
@@ -334,6 +352,13 @@ function ActiveSessionView() {
     updateSession({ ...s, groups });
   }
 
+  function logSet(groupId: string, block: SessionBlock) {
+    const si = block.sets.findIndex(st => !st.completed);
+    if (si < 0) return;
+    updateSet(groupId, block.id, si, { completed: true });
+    if (si === block.sets.length - 1) setExpandedBlock(null);
+  }
+
   return (
     <div className="today-view">
       {/* Topbar */}
@@ -342,13 +367,6 @@ function ActiveSessionView() {
         <span className="crumb">
           {isEditing ? 'Session / Editing' : 'Session / In Progress'}
         </span>
-        <div style={{ display: 'flex', gap: 6 }}>
-          <button className="icon-btn" onClick={() => setConfirmDiscard(true)} title="Discard">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-            </svg>
-          </button>
-        </div>
       </div>
 
       {/* Editing banner */}
@@ -361,9 +379,9 @@ function ActiveSessionView() {
         </div>
       )}
 
-      {/* Session header */}
-      <div style={{ padding: '12px 16px 10px', borderBottom: '1px solid var(--line)', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexShrink: 0 }}>
-        <div>
+      {/* Session header + progress bar */}
+      <div className="session-header">
+        <div className="session-header__left">
           {!isEditing && (
             <div className="session-timer mono">
               {String(mins).padStart(2, '0')}:{String(secs).padStart(2, '0')}
@@ -371,117 +389,263 @@ function ActiveSessionView() {
           )}
           <div className="session-name">{s.workoutName}</div>
         </div>
+        <div className="session-header__right">
+          <span className="session-progress-label">{doneSets}/{totalSets}</span>
+        </div>
+      </div>
+      <div className="session-progress">
+        <div className="session-progress__bar" style={{ width: `${progress * 100}%` }} />
       </div>
 
-      {/* Scrollable groups */}
+      {/* Scrollable groups — Browse → Focus */}
       <div className="session-scroll">
         {s.groups.map(group => {
           const groupClass = GROUP_CLASS[group.groupType] ?? 'g-main';
           const completedCount = group.blocks.reduce((a, b) => a + b.sets.filter(st => st.completed).length, 0);
           const totalCount = group.blocks.reduce((a, b) => a + b.sets.length, 0);
+
           return (
             <div key={group.id} className={`group ${groupClass}`} style={{ marginTop: 16 }}>
               <div className="group-head">
                 <span className="gname">{group.name}</span>
-                <span className="gmeta">{completedCount}/{totalCount} sets</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+                  <span className="gmeta">{completedCount}/{totalCount}</span>
+                  <button
+                    className="icon-btn"
+                    style={{ width: 22, height: 22, borderRadius: 3 }}
+                    onClick={() => setPickerGroupId(group.id)}
+                    title="Add Exercise"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                  </button>
+                </div>
               </div>
 
               {group.blocks.map(block => {
                 const ex = exerciseMap.get(block.exerciseId);
                 const timeBased = isTimeBased(ex);
+                const blockKey = `${group.id}:${block.id}`;
+                const isOpen = expandedBlock === blockKey;
+                const pendingIdx = block.sets.findIndex(st => !st.completed);
+                const allDone = pendingIdx === -1;
+
                 return (
-                <div key={block.id} className="block">
-                  <div className="block-head">
-                    <span className="block-name">{block.exerciseName}</span>
-                  </div>
-
-                  {/* Set header row */}
-                  <div className="set-row head">
-                    <span></span>
-                    <span>Weight</span>
-                    <span>{timeBased ? 'Time (s)' : 'Reps'}</span>
-                    <span></span>
-                  </div>
-
-                  {block.sets.map((set, si) => {
-                    const key = `${group.id}-${block.id}-${si}`;
-                    const isDone = set.completed;
-                    const isJustDone = justDoneKeys.has(key);
-                    return (
-                      <div
-                        key={si}
-                        className={`set-row${isDone ? ' done' : ''}${isJustDone ? ' just-done' : ''}`}
+                  <div key={block.id} className={`browse-block${isOpen ? ' browse-block--open' : ''}${allDone ? ' browse-block--done' : ''}`}>
+                    {/* Compact row */}
+                    <div className="browse-row">
+                      <button
+                        className="browse-row__tap"
+                        onClick={() => setExpandedBlock(isOpen ? null : blockKey)}
                       >
-                        <span className="snum">{si + 1}</span>
-                        <input
-                          className="num-input"
-                          type="number"
-                          placeholder="—"
-                          value={set.weight ?? ''}
-                          onChange={e => updateSet(group.id, block.id, si, {
-                            weight: e.target.value ? parseFloat(e.target.value) : null,
-                          })}
-                        />
-                        {timeBased ? (
-                          <input
-                            className="num-input"
-                            type="number"
-                            placeholder="—"
-                            value={set.time ?? ''}
-                            onChange={e => updateSet(group.id, block.id, si, {
-                              time: e.target.value ? parseInt(e.target.value) : null,
-                            })}
+                        <div className="browse-row__left">
+                          <div className="browse-row__name-row">
+                            <span className="browse-row__name">{block.exerciseName}</span>
+                            {ex?.videoUrl && (
+                              <button
+                                className="video-play-btn"
+                                onClick={e => {
+                                  e.stopPropagation();
+                                  setMiniVideoUrl(miniVideoUrl === ex.videoUrl ? null : ex.videoUrl!);
+                                }}
+                                aria-label="Play video"
+                              >
+                                <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor">
+                                  <polygon points="5,3 19,12 5,21" />
+                                </svg>
+                              </button>
+                            )}
+                          </div>
+                          <span className="browse-row__prescription">{prescriptionLabel(block, ex)}</span>
+                        </div>
+                      </button>
+                      <div className="browse-row__dots" onClick={() => setExpandedBlock(isOpen ? null : blockKey)} style={{ cursor: 'pointer' }}>
+                        {block.sets.map((set, i) => (
+                          <span
+                            key={i}
+                            className={`sdot${set.completed ? ' sdot--done' : i === pendingIdx ? ' sdot--next' : ''}`}
                           />
-                        ) : (
-                          <input
-                            className="num-input"
-                            type="number"
-                            placeholder="—"
-                            value={set.reps ?? ''}
-                            onChange={e => updateSet(group.id, block.id, si, {
-                              reps: e.target.value ? parseInt(e.target.value) : null,
-                            })}
-                          />
-                        )}
-                        <button
-                          className="complete-btn"
-                          onClick={() => toggleComplete(group.id, block.id, si, isDone)}
-                          aria-label={isDone ? 'Mark incomplete' : 'Mark complete'}
-                        >
-                          <span className="dot" />
-                        </button>
+                        ))}
                       </div>
-                    );
-                  })}
+                    </div>
 
-                  <button
-                    className="add-block"
-                    style={{ marginTop: 8 }}
-                    onClick={() => addSet(group.id, block.id)}
-                  >
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                    </svg>
-                    Add Set
-                  </button>
-                </div>
+                    {/* Focus panel — next pending set */}
+                    {isOpen && !allDone && (() => {
+                      const si = pendingIdx;
+                      const set = block.sets[si];
+                      return (
+                        <div className="focus-panel">
+                          <div className="focus-panel__header">
+                            <span className="focus-panel__setnum">SET {si + 1} / {block.sets.length}</span>
+                            <div style={{ display: 'flex', gap: 12, alignItems: 'center' }}>
+                              <button
+                                className="focus-panel__add-set"
+                                onClick={() => {
+                                  const allKey = blockKey + ':all';
+                                  setShowAllSetsFor(showAllSetsFor === allKey ? null : allKey);
+                                }}
+                              >{showAllSetsFor === blockKey + ':all' ? 'Focus' : 'All sets'}</button>
+                              <button
+                                className="focus-panel__add-set"
+                                onClick={() => addSet(group.id, block.id)}
+                              >+ set</button>
+                              <button
+                                className="focus-panel__skip"
+                                onClick={() => {
+                                  updateSet(group.id, block.id, si, { completed: true });
+                                  if (si === block.sets.length - 1) setExpandedBlock(null);
+                                }}
+                              >Skip</button>
+                            </div>
+                          </div>
+
+                          {showAllSetsFor === blockKey + ':all' ? (
+                            /* All-sets edit view */
+                            <div className="all-sets-list">
+                              {block.sets.map((setItem, sii) => (
+                                <div key={sii} className={`all-set-row${setItem.completed ? ' all-set-row--done' : sii === si ? ' all-set-row--current' : ''}`}>
+                                  <span className="all-set-num">{sii + 1}</span>
+                                  <input
+                                    className="all-set-input"
+                                    type="number"
+                                    inputMode="decimal"
+                                    placeholder="wt"
+                                    value={setItem.weight ?? ''}
+                                    onChange={e => updateSet(group.id, block.id, sii, { weight: e.target.value ? parseFloat(e.target.value) : null })}
+                                  />
+                                  <input
+                                    className="all-set-input"
+                                    type="number"
+                                    inputMode="numeric"
+                                    placeholder={timeBased ? 'sec' : 'reps'}
+                                    value={timeBased ? (setItem.time ?? '') : (setItem.reps ?? '')}
+                                    onChange={e => {
+                                      const v = e.target.value ? parseInt(e.target.value) : null;
+                                      timeBased
+                                        ? updateSet(group.id, block.id, sii, { time: v })
+                                        : updateSet(group.id, block.id, sii, { reps: v });
+                                    }}
+                                  />
+                                  <button
+                                    className={`all-set-toggle${setItem.completed ? ' done' : ''}`}
+                                    onClick={() => updateSet(group.id, block.id, sii, { completed: !setItem.completed })}
+                                  >
+                                    <span className="dot" />
+                                  </button>
+                                </div>
+                              ))}
+                            </div>
+                          ) : (
+                            <>
+                              <div className="focus-inputs">
+                                {/* Weight */}
+                                <div className="focus-field">
+                                  <div className="focus-field__label">Weight</div>
+                                  <div className="focus-field__row">
+                                    <button className="nudge-btn" onClick={() => updateSet(group.id, block.id, si, { weight: Math.max(0, (set.weight ?? 0) - 2.5) })}>−2.5</button>
+                                    <input
+                                      className="focus-input"
+                                      type="number"
+                                      inputMode="decimal"
+                                      placeholder="—"
+                                      value={set.weight ?? ''}
+                                      onChange={e => updateSet(group.id, block.id, si, { weight: e.target.value ? parseFloat(e.target.value) : null })}
+                                    />
+                                    <button className="nudge-btn" onClick={() => updateSet(group.id, block.id, si, { weight: (set.weight ?? 0) + 2.5 })}>+2.5</button>
+                                  </div>
+                                </div>
+
+                                {/* Reps or Time */}
+                                <div className="focus-field">
+                                  <div className="focus-field__label">{timeBased ? 'Time (s)' : 'Reps'}</div>
+                                  <div className="focus-field__row">
+                                    <button className="nudge-btn" onClick={() => timeBased
+                                      ? updateSet(group.id, block.id, si, { time: Math.max(1, (set.time ?? 0) - 5) })
+                                      : updateSet(group.id, block.id, si, { reps: Math.max(1, (set.reps ?? 0) - 1) })
+                                    }>{timeBased ? '−5' : '−1'}</button>
+                                    <input
+                                      className="focus-input"
+                                      type="number"
+                                      inputMode="numeric"
+                                      placeholder="—"
+                                      value={timeBased ? (set.time ?? '') : (set.reps ?? '')}
+                                      onChange={e => {
+                                        const v = e.target.value ? parseInt(e.target.value) : null;
+                                        timeBased
+                                          ? updateSet(group.id, block.id, si, { time: v })
+                                          : updateSet(group.id, block.id, si, { reps: v });
+                                      }}
+                                    />
+                                    <button className="nudge-btn" onClick={() => timeBased
+                                      ? updateSet(group.id, block.id, si, { time: (set.time ?? 0) + 5 })
+                                      : updateSet(group.id, block.id, si, { reps: (set.reps ?? 0) + 1 })
+                                    }>{timeBased ? '+5' : '+1'}</button>
+                                  </div>
+                                </div>
+                              </div>
+
+                              <button
+                                className="btn primary btn-full"
+                                onClick={() => logSet(group.id, block)}
+                              >
+                                Log Set {si + 1}
+                              </button>
+                            </>
+                          )}
+                        </div>
+                      );
+                    })()}
+
+                    {/* All done state */}
+                    {isOpen && allDone && (
+                      <div className="focus-done">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        All sets logged
+                        <button
+                          className="focus-panel__add-set"
+                          style={{ marginLeft: 'auto' }}
+                          onClick={() => addSet(group.id, block.id)}
+                        >+ extra set</button>
+                      </div>
+                    )}
+                  </div>
                 );
               })}
 
-              <button
-                className="add-block"
-                style={{ marginTop: 8 }}
-                onClick={() => setPickerGroupId(group.id)}
-              >
-                <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                </svg>
-                Add Exercise
-              </button>
             </div>
           );
         })}
       </div>
+
+      {/* Mini video player */}
+      {miniVideoUrl && (() => {
+        const videoId = extractYouTubeId(miniVideoUrl);
+        if (!videoId) return null;
+        return (
+          <div className="mini-player">
+            <div className="mini-player__video">
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+              />
+            </div>
+            <button
+              className="mini-player__close"
+              onClick={() => setMiniVideoUrl(null)}
+              aria-label="Close video"
+            >
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        );
+      })()}
 
       {/* Sticky action bar */}
       <div className="stickybar">

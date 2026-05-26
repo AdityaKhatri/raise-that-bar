@@ -1,6 +1,6 @@
 import { useState } from 'react';
-import { parseLibraryCsv } from '../../lib/csv';
-import { mergeExerciseLibrary } from '../../db/exercises';
+import { syncLibraryFromGitHub } from '../../lib/library';
+
 interface Props {
   onSynced: () => void;
 }
@@ -13,13 +13,7 @@ export function LibrarySyncButton({ onSynced }: Props) {
     setStatus('loading');
     setMsg('');
     try {
-      const url = `${import.meta.env.BASE_URL}library.csv`;
-      const res = await fetch(url, { cache: 'no-store' });
-      if (!res.ok) throw new Error(`HTTP ${res.status}`);
-      const text = await res.text();
-      const rows = parseLibraryCsv(text);
-      if (rows.length === 0) throw new Error('CSV appears empty or invalid');
-      const { inserted, updated } = await mergeExerciseLibrary(rows);
+      const { inserted, updated } = await syncLibraryFromGitHub();
       setMsg(`${inserted} new · ${updated} updated`);
       setStatus('ok');
       onSynced();

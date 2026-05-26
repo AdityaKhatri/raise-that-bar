@@ -290,7 +290,21 @@ function SettingsSection() {
   const { account, syncing, lastSync, error, connect, disconnect, syncNow, clearError } = useSyncContext();
   const [importError, setImportError] = useState<string | null>(null);
   const [wipePending, setWipePending] = useState(false);
+  const [theme, setTheme] = useState<'dark' | 'light'>(() => {
+    return (localStorage.getItem('iron_log_theme') as 'dark' | 'light') ?? 'dark';
+  });
   const driveConfigured = !!(import.meta.env.VITE_GOOGLE_CLIENT_ID as string | undefined);
+
+  function toggleTheme() {
+    const next = theme === 'dark' ? 'light' : 'dark';
+    setTheme(next);
+    localStorage.setItem('iron_log_theme', next);
+    if (next === 'light') {
+      document.documentElement.setAttribute('data-theme', 'light');
+    } else {
+      document.documentElement.removeAttribute('data-theme');
+    }
+  }
 
   function formatLastSync(ts: number | null): string {
     if (!ts) return 'Never';
@@ -469,6 +483,27 @@ function SettingsSection() {
           <button className="btn ghost btn-sm" onClick={() => setImportError(null)}>✕</button>
         </div>
       )}
+
+      {/* ── Appearance ── */}
+      <div className="profile-settings-group-label">Appearance</div>
+      <div className="profile-card" style={{ marginBottom: 16 }}>
+        <div className="profile-field last">
+          <span className="profile-field-label">Theme</span>
+          <div className="profile-field-value">
+            <div className="profile-unit-toggle">
+              {(['dark', 'light'] as const).map(t => (
+                <button
+                  key={t}
+                  className={`profile-unit-btn${theme === t ? ' active' : ''}`}
+                  onClick={() => { if (theme !== t) toggleTheme(); }}
+                >
+                  {t === 'dark' ? '🌙 Dark' : '☀️ Light'}
+                </button>
+              ))}
+            </div>
+          </div>
+        </div>
+      </div>
     </section>
   );
 }

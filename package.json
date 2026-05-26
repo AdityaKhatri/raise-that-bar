@@ -8,12 +8,16 @@
     "build": "tsc -b && vite build",
     "lint": "eslint .",
     "preview": "vite preview",
+    "typecheck": "tsc -b --noEmit",
     "predeploy": "npm run build",
     "deploy": "gh-pages -d dist"
   },
   "dependencies": {
+    "@types/qrcode": "^1.5.6",
     "chart.js": "^4.5.1",
     "gh-pages": "^6.3.0",
+    "jsqr": "^1.4.0",
+    "qrcode": "^1.5.4",
     "react": "^19.2.5",
     "react-dom": "^19.2.5"
   },

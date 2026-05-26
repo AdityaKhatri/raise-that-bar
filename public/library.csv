@@ -1,42 +1,315 @@
 id,name,muscleGroup,secondaryMuscles,equipment,category,videoUrl,defaultUnit
-ex_pullup,Pull-Up,back,"biceps,shoulders",bodyweight,muscle,https://youtu.be/eGo4IYlbE5g,
-ex_chinup,Chin-Up,back,"biceps,shoulders",bodyweight,muscle,https://youtu.be/brhRXlOhsAM,
-ex_bench_press,Bench Press,chest,"triceps,shoulders",barbell,muscle,https://youtu.be/rT7DgCr-3pg,kg
-ex_incline_bench,Incline Bench Press,chest,"triceps,shoulders",barbell,muscle,,kg
-ex_ohp,Overhead Press,shoulders,"triceps,upper back",barbell,muscle,https://youtu.be/2yjwXTZQDDI,kg
-ex_squat,Back Squat,legs,"glutes,core",barbell,muscle,https://youtu.be/ultWZbUMPL8,kg
+ex_joint_rotations,Joint Rotations,full-body,,bodyweight,warmup,,min
+ex_treadmill_brisk_walk,Treadmill Brisk Walk,legs,full-body,machine,warmup,,min
+ex_treadmill_jog,Treadmill Jog,legs,full-body,machine,warmup,,min
+ex_jumping_jack,Jumping Jack,full-body,,bodyweight,warmup,,
+ex_high_knees,High Knees,legs,core,bodyweight,warmup,,
+ex_butt_kicks,Butt Kicks,legs,,bodyweight,warmup,,
+ex_a_skips,A-Skips,legs,core,bodyweight,warmup,https://www.youtube.com/watch?v=-O9H15yVc8s,
+ex_b_skips,B-Skips,legs,core,bodyweight,warmup,https://www.youtube.com/watch?v=pHo0zb-K_s8,
+ex_front_leg_swings,Front Leg Swings,legs,core,bodyweight,warmup,,
+ex_side_leg_swings,Side Leg Swings,legs,core,bodyweight,warmup,,
+ex_arm_circles,Arm Circles,shoulders,,bodyweight,warmup,https://www.youtube.com/watch?v=35h5gdlm46w,
+ex_scapular_wall_slides,Scapular Wall Slides,shoulders,back,bodyweight,warmup,,
+ex_band_pull_apart,Band Pull Apart,shoulders,back,band,warmup,https://www.youtube.com/watch?v=1lQdu_U4AAI,
+ex_band_dislocates,Band Shoulder Dislocates,shoulders,,band,warmup,https://www.youtube.com/watch?v=a9rqTzZaI7s,
+ex_inchworm,Inchworm,full-body,core,bodyweight,warmup,,
+ex_walkout,Walkout,full-body,core,bodyweight,warmup,,
+ex_bear_crawl,Bear Crawl,full-body,"core,shoulders",bodyweight,warmup,,
+ex_crab_walk,Crab Walk,full-body,"core,shoulders",bodyweight,warmup,,
+ex_monster_walk,Monster Walk (Band),legs,glutes,band,warmup,,
+ex_lateral_band_walk,Lateral Band Walk,legs,glutes,band,warmup,,
+ex_glute_bridge_warmup,Glute Bridge (Warmup),glutes,core,bodyweight,warmup,,
+ex_dead_bug,Dead Bug,core,,bodyweight,warmup,,
+ex_birddog,Bird Dog,core,"back,glutes",bodyweight,warmup,,
+ex_scapular_pushup,Scapular Push-Up,shoulders,chest,bodyweight,warmup,,
+ex_scapula_pullups,Scapula Pull Ups,back,shoulders,bodyweight,warmup,,
+ex_worlds_greatest,World's Greatest Stretch,full-body,,bodyweight,stretching,,
+ex_downward_dog_cobra,Downward Dog to Cobra,full-body,"shoulders,core",bodyweight,stretching,,
+ex_squat_to_stand,Squat to Stand,legs,back,bodyweight,stretching,,
+ex_forward_lunge_oh_reach,Forward Lunge Overhead Reach,legs,"shoulders,core",bodyweight,stretching,,
+ex_reverse_t_hip_opener,Reverse T Hip Opener,legs,core,bodyweight,stretching,,
+ex_full_t_hip_opener,Full T Hip Opener,legs,core,bodyweight,stretching,,
+ex_standing_hip_cars,Standing Hip CARs,legs,core,bodyweight,stretching,,
+ex_seated_hip_cars,Seated Hip CARs,legs,core,bodyweight,stretching,,
+ex_tall_kneeling_hip_cars,Tall Kneeling Hip CARs,legs,core,bodyweight,stretching,,
+ex_shin_box_getups,Shin Box Get Ups,legs,"core,glutes",bodyweight,stretching,,
+ex_active_frog,Active Frog,legs,core,bodyweight,stretching,https://www.youtube.com/watch?v=1t_LbiqHLEg,
+ex_90_90_hip_switch,90/90 Hip Switch,legs,core,bodyweight,stretching,https://www.youtube.com/watch?v=m51AZSXMvEA,
+ex_cossack_stretch,Cossack Stretch,legs,,bodyweight,stretching,,
+ex_cat_cow,Cat Cow,back,core,bodyweight,stretching,,
+ex_thread_the_needle,Thread The Needle,back,shoulders,bodyweight,stretching,,
+ex_prone_t,Prone T's,back,shoulders,bodyweight,stretching,,
+ex_prone_y,Prone Y's,back,shoulders,bodyweight,stretching,,
+ex_prone_w,Prone W's,back,shoulders,bodyweight,stretching,,
+ex_blackburn,Black Burn,back,shoulders,bodyweight,stretching,,
+ex_superman_pull,Superman Pull,back,"shoulders,glutes",bodyweight,stretching,,
+ex_wrist_circles,Wrist Circles,arms,,bodyweight,stretching,,
+ex_wrist_pushups,Wrist Push Ups,arms,,bodyweight,stretching,,
+ex_alt_wrist_flex_ext,Alternate Wrist Flexion - Extension,arms,,bodyweight,stretching,https://www.youtube.com/watch?v=nJPzW3RiyQ4,
+ex_bw_heel_elev_squat_iso,BW Heel Elevated Squat ISO Hold,legs,glutes,bodyweight,stretching,,sec
+ex_bulgarian_split_iso,Bulgarian Split Squat ISO Hold,legs,glutes,bodyweight,stretching,,sec
+ex_couch_stretch,Couch Stretch,legs,glutes,bodyweight,stretching,,sec
+ex_90_90_stretch,90/90 Stretch,legs,glutes,bodyweight,stretching,https://www.youtube.com/watch?v=t4Zz6-aG8Iw,sec
+ex_pancake_stretch,Pancake Stretch,legs,back,bodyweight,stretching,,sec
+ex_butterfly_stretch,Butterfly Stretch,legs,,bodyweight,stretching,,sec
+ex_seated_forward_fold,Seated Forward Fold,legs,back,bodyweight,stretching,,sec
+ex_childs_pose,Child's Pose,back,shoulders,bodyweight,cooldown,,sec
+ex_pigeon_stretch,Pigeon Stretch,legs,glutes,bodyweight,cooldown,,sec
+ex_standing_quad_stretch,Standing Quad Stretch,legs,,bodyweight,cooldown,,sec
+ex_lateral_prayers,Lateral Prayers,shoulders,arms,bodyweight,cooldown,,sec
+ex_crossed_prayer,Crossed Prayer,shoulders,arms,bodyweight,cooldown,,sec
+ex_cobra_stretch,Cobra Stretch,core,back,bodyweight,cooldown,,sec
+ex_seated_spinal_twist,Seated Spinal Twist,back,core,bodyweight,cooldown,,sec
+ex_supine_figure_4,Supine Figure 4 Stretch,glutes,legs,bodyweight,cooldown,,sec
+ex_hamstring_stretch_supine,Supine Hamstring Stretch,legs,,bodyweight,cooldown,,sec
+ex_calf_stretch_wall,Calf Stretch (Wall),legs,,bodyweight,cooldown,,sec
+ex_doorway_chest_stretch,Doorway Chest Stretch,chest,shoulders,bodyweight,cooldown,,sec
+ex_triceps_overhead_stretch,Overhead Triceps Stretch,arms,shoulders,bodyweight,cooldown,,sec
+ex_neck_stretch,Neck Side Stretch,shoulders,,bodyweight,cooldown,,sec
+ex_happy_baby,Happy Baby,back,legs,bodyweight,cooldown,,sec
+ex_lying_spinal_twist,Lying Spinal Twist,back,core,bodyweight,cooldown,,sec
+ex_seal_stretch,Seal Stretch,core,back,bodyweight,cooldown,,sec
+ex_flat_bench_bb_press,Flat Bench Barbell Press,chest,"triceps,shoulders",barbell,muscle,,kg
+ex_incline_bench_bb_press,Incline Bench Barbell Press,chest,"triceps,shoulders",barbell,muscle,,kg
+ex_decline_bench_bb_press,Decline Bench Barbell Press,chest,triceps,barbell,muscle,,kg
+ex_flat_bench_db_press,Flat Bench DB Press,chest,"triceps,shoulders",dumbbell,muscle,,kg
+ex_incline_bench_db_press,Incline Bench DB Press,chest,"triceps,shoulders",dumbbell,muscle,,kg
+ex_decline_bench_db_press,Decline Bench DB Press,chest,triceps,dumbbell,muscle,,kg
+ex_flat_db_fly,Flat DB Fly,chest,shoulders,dumbbell,muscle,,kg
+ex_incline_db_fly,Incline DB Fly,chest,shoulders,dumbbell,muscle,,kg
+ex_cable_chest_fly,Cable Chest Fly,chest,shoulders,cable,muscle,,kg
+ex_low_to_high_cable_fly,Low to High Cable Fly,chest,shoulders,cable,muscle,,kg
+ex_high_to_low_cable_fly,High to Low Cable Fly,chest,shoulders,cable,muscle,,kg
+ex_pec_deck_machine,Pec Deck Machine,chest,shoulders,machine,muscle,,kg
+ex_chest_press_machine,Chest Press Machine,chest,"triceps,shoulders",machine,muscle,,kg
+ex_incline_chest_press_machine,Incline Chest Press Machine,chest,"triceps,shoulders",machine,muscle,,kg
+ex_pushup,Push Up,chest,"triceps,shoulders,core",bodyweight,muscle,,
+ex_incline_box_pushup,Incline Box Push Ups,chest,"triceps,shoulders",bodyweight,muscle,,
+ex_decline_pushup,Decline Push Up,chest,"triceps,shoulders",bodyweight,muscle,,
+ex_diamond_pushup,Diamond Push Up,chest,triceps,bodyweight,muscle,,
+ex_wide_pushup,Wide Push Up,chest,shoulders,bodyweight,muscle,,
+ex_archer_pushup,Archer Push Up,chest,"triceps,shoulders",bodyweight,muscle,https://www.youtube.com/watch?v=wJKLatFY-aU,
+ex_dips_chest,Chest Dips,chest,"triceps,shoulders",bodyweight,muscle,,
+ex_svend_press,Svend Press,chest,shoulders,dumbbell,muscle,,kg
+ex_db_pullover,DB Pullover,chest,back,dumbbell,muscle,,kg
+ex_pullup,Pull-Up,back,"biceps,shoulders",bodyweight,muscle,,
+ex_chinup,Chin-Up,back,biceps,bodyweight,muscle,,
+ex_neutral_grip_pullup,Neutral Grip Pull-Up,back,biceps,bodyweight,muscle,,
+ex_inverted_row,Inverted Rows,back,"biceps,shoulders",bodyweight,muscle,,
+ex_wide_lat_pulldown,Wide Grip Lat Pull Down,back,biceps,cable,muscle,,kg
+ex_close_grip_lat_pulldown,Close Grip Lat Pull Down,back,biceps,cable,muscle,,kg
+ex_neutral_grip_lat_pulldown,Neutral Grip Lat Pull Down,back,biceps,cable,muscle,,kg
+ex_straight_arm_pulldown,Straight Arm Pulldown,back,core,cable,muscle,,kg
+ex_seated_cable_row,Seated Cable Row,back,"biceps,shoulders",cable,muscle,,kg
+ex_single_arm_cable_row,Single Arm Cable Row,back,biceps,cable,muscle,,kg
+ex_bb_bent_over_row,Barbell Bent Over Row,back,"biceps,shoulders",barbell,muscle,,kg
+ex_pendlay_row,Pendlay Row,back,"biceps,shoulders",barbell,muscle,,kg
+ex_yates_row,Yates Row,back,"biceps,shoulders",barbell,muscle,,kg
+ex_t_bar_row,T-Bar Row,back,"biceps,shoulders",barbell,muscle,,kg
+ex_db_bent_over_row,DB Bent Over Row,back,biceps,dumbbell,muscle,,kg
+ex_single_arm_db_row,Single Arm DB Row,back,biceps,dumbbell,muscle,,kg
+ex_chest_supported_row,Chest Supported Rows,back,"biceps,shoulders",dumbbell,muscle,,kg
+ex_meadows_row,Meadows Row,back,"biceps,shoulders",barbell,muscle,,kg
+ex_seal_row,Seal Row,back,"biceps,shoulders",barbell,muscle,,kg
+ex_machine_row,Machine Row,back,"biceps,shoulders",machine,muscle,,kg
+ex_rack_pull,Rack Pull,back,"glutes,legs",barbell,muscle,,kg
+ex_good_morning,Good Morning,back,"glutes,legs",barbell,muscle,,kg
+ex_hyperextension,Hyperextension (Back Ext),back,glutes,machine,muscle,,
+ex_reverse_hyperextension,Reverse Hyperextension,back,glutes,machine,muscle,,
+ex_face_pull,Face Pull,back,shoulders,cable,muscle,,kg
+ex_bb_shoulder_press,Barbell Shoulder Press,shoulders,triceps,barbell,muscle,,kg
+ex_seated_bb_shoulder_press,Seated Barbell Shoulder Press,shoulders,triceps,barbell,muscle,,kg
+ex_seated_db_shoulder_press,Seated DB Shoulder Press,shoulders,triceps,dumbbell,muscle,,kg
+ex_standing_db_shoulder_press,Standing DB Shoulder Press,shoulders,"triceps,core",dumbbell,muscle,,kg
+ex_arnold_press,Arnold Press,shoulders,triceps,dumbbell,muscle,https://www.youtube.com/watch?v=sbGP9VjnjEg,kg
+ex_db_push_press,DB Push Press,shoulders,"triceps,legs",dumbbell,muscle,,kg
+ex_bb_push_press,Barbell Push Press,shoulders,"triceps,legs",barbell,muscle,,kg
+ex_machine_shoulder_press,Machine Shoulder Press,shoulders,triceps,machine,muscle,,kg
+ex_db_lateral_raise,DB Lateral Raise,shoulders,,dumbbell,muscle,,kg
+ex_cable_lateral_raise,Cable Lateral Raise,shoulders,,cable,muscle,,kg
+ex_machine_lateral_raise,Machine Lateral Raise,shoulders,,machine,muscle,,kg
+ex_db_front_raise,DB Front Raise,shoulders,,dumbbell,muscle,,kg
+ex_cable_front_raise,Cable Front Raise,shoulders,,cable,muscle,,kg
+ex_plate_front_raise,Plate Front Raise,shoulders,,barbell,muscle,,kg
+ex_rear_delt_fly_db,DB Rear Delt Fly,shoulders,back,dumbbell,muscle,,kg
+ex_rear_delt_fly_cable,Cable Rear Delt Fly,shoulders,back,cable,muscle,,kg
+ex_reverse_pec_deck,Reverse Pec Deck,shoulders,back,machine,muscle,,kg
+ex_bb_upright_row,Barbell Upright Rows,shoulders,"back,biceps",barbell,muscle,,kg
+ex_db_upright_row,DB Upright Row,shoulders,"back,biceps",dumbbell,muscle,,kg
+ex_cable_upright_row,Cable Upright Row,shoulders,"back,biceps",cable,muscle,,kg
+ex_bb_shrug,Barbell Shrug,shoulders,back,barbell,muscle,,kg
+ex_db_shrug,DB Shrug,shoulders,back,dumbbell,muscle,,kg
+ex_cable_shrug,Cable Shrug,shoulders,back,cable,muscle,,kg
+ex_handstand_pushup,Handstand Push Up,shoulders,"triceps,core",bodyweight,muscle,,
+ex_pike_pushup,Pike Push Up,shoulders,triceps,bodyweight,muscle,,
+ex_bb_bicep_curl,Barbell Bicep Curl,arms,biceps,barbell,muscle,,kg
+ex_ez_bar_curl,EZ Bar Curl,arms,biceps,barbell,muscle,,kg
+ex_db_bicep_curl,DB Bicep Curl,arms,biceps,dumbbell,muscle,,kg
+ex_alt_db_bicep_curl,Alternative DB Bicep Curl,arms,biceps,dumbbell,muscle,https://www.youtube.com/watch?v=WYezBGuUsdw,kg
+ex_incline_db_curl,Incline DB Curl,arms,biceps,dumbbell,muscle,,kg
+ex_hammer_curl,Hammer Curl,arms,biceps,dumbbell,muscle,,kg
+ex_cross_body_hammer_curl,Cross Body Hammer Curl,arms,biceps,dumbbell,muscle,,kg
+ex_preacher_curl,Preacher Curl,arms,biceps,barbell,muscle,,kg
+ex_db_preacher_curl,DB Preacher Curl,arms,biceps,dumbbell,muscle,,kg
+ex_cable_bicep_curl,Cable Bicep Curl,arms,biceps,cable,muscle,,kg
+ex_cable_rope_curl,Cable Rope Curl,arms,biceps,cable,muscle,,kg
+ex_concentration_curl,Concentration Curl,arms,biceps,dumbbell,muscle,,kg
+ex_spider_curl,Spider Curl,arms,biceps,dumbbell,muscle,,kg
+ex_zottman_curl,Zottman Curl,arms,biceps,dumbbell,muscle,,kg
+ex_reverse_curl,Reverse Curl,arms,biceps,barbell,muscle,,kg
+ex_machine_bicep_curl,Machine Bicep Curl,arms,biceps,machine,muscle,,kg
+ex_bb_skull_crushers,Barbell Skull Crushers,arms,triceps,barbell,muscle,,kg
+ex_ez_skull_crushers,EZ Bar Skull Crushers,arms,triceps,barbell,muscle,,kg
+ex_db_skull_crushers,DB Skull Crushers,arms,triceps,dumbbell,muscle,,kg
+ex_close_grip_bench,Close Grip Bench Press,arms,"triceps,chest",barbell,muscle,,kg
+ex_cable_tricep_extension,Cable Tricep Extension,arms,triceps,cable,muscle,,kg
+ex_cable_rope_pushdown,Cable Rope Pushdown,arms,triceps,cable,muscle,,kg
+ex_cable_v_bar_pushdown,V-Bar Pushdown,arms,triceps,cable,muscle,,kg
+ex_cable_overhead_extension,Cable Overhead Tricep Extension,arms,triceps,cable,muscle,,kg
+ex_db_overhead_extension,DB Overhead Tricep Extension,arms,triceps,dumbbell,muscle,,kg
+ex_single_db_tricep_extension,Single DB Tricep Extension,arms,triceps,dumbbell,muscle,,kg
+ex_db_french_press,DB French Press,arms,triceps,dumbbell,muscle,,kg
+ex_db_kickback,DB Tricep Kickback,arms,triceps,dumbbell,muscle,,kg
+ex_cable_tricep_kickback,Cable Tricep Kickback,arms,triceps,cable,muscle,,kg
+ex_dips_triceps,Tricep Dips,arms,"triceps,chest",bodyweight,muscle,,
+ex_bench_dips,Bench Dips,arms,triceps,bodyweight,muscle,,
+ex_machine_tricep_extension,Machine Tricep Extension,arms,triceps,machine,muscle,,kg
+ex_wrist_curl,Wrist Curl,arms,forearms,dumbbell,muscle,,kg
+ex_reverse_wrist_curl,Reverse Wrist Curl,arms,forearms,dumbbell,muscle,,kg
+ex_farmers_carry,Farmer's Carry,full-body,"forearms,core",dumbbell,muscle,,kg
+ex_dead_hang,Dead Hang,back,forearms,bodyweight,muscle,,sec
+ex_plate_pinch,Plate Pinch,arms,forearms,barbell,muscle,,sec
+ex_bb_squat,Barbell Squats,legs,"glutes,core",barbell,muscle,,kg
 ex_front_squat,Front Squat,legs,"glutes,core",barbell,muscle,,kg
-ex_deadlift,Deadlift,back,"glutes,hamstrings,core",barbell,muscle,https://youtu.be/op9kVnSso6Q,kg
-ex_rdl,Romanian Deadlift,hamstrings,"glutes,lower back",barbell,muscle,,kg
-ex_row_bb,Barbell Row,back,"biceps,core",barbell,muscle,,kg
-ex_row_db,Dumbbell Row,back,biceps,dumbbell,muscle,,kg
-ex_dip,Dip,chest,"triceps,shoulders",bodyweight,muscle,https://youtu.be/2z8JmcrW-As,
-ex_pushup,Push-Up,chest,"triceps,shoulders",bodyweight,muscle,,
-ex_lat_pulldown,Lat Pulldown,back,biceps,cable,muscle,,kg
-ex_cable_row,Cable Row,back,biceps,cable,muscle,,kg
+ex_low_bar_squat,Low Bar Back Squat,legs,"glutes,back",barbell,muscle,,kg
+ex_high_bar_squat,High Bar Back Squat,legs,"glutes,core",barbell,muscle,,kg
+ex_box_squat,Box Squat,legs,glutes,barbell,muscle,,kg
+ex_pause_squat,Pause Squat,legs,"glutes,core",barbell,muscle,,kg
+ex_goblet_squat,Goblet Squat,legs,"glutes,core",dumbbell,muscle,,kg
+ex_heel_elev_goblet_squat,Heel Elevated Goblet Squat,legs,"glutes,core",dumbbell,muscle,,kg
+ex_hack_squat,Hack Squat,legs,glutes,machine,muscle,,kg
 ex_leg_press,Leg Press,legs,glutes,machine,muscle,,kg
-ex_leg_curl,Leg Curl,hamstrings,,machine,muscle,,kg
-ex_leg_ext,Leg Extension,legs,,machine,muscle,,kg
-ex_calf_raise,Calf Raise,legs,,machine,muscle,,kg
-ex_bicep_curl_bb,Barbell Curl,biceps,forearms,barbell,muscle,,kg
-ex_bicep_curl_db,Dumbbell Curl,biceps,forearms,dumbbell,muscle,,kg
-ex_tricep_pushdown,Tricep Pushdown,triceps,,cable,muscle,,kg
-ex_skull_crusher,Skull Crusher,triceps,,barbell,muscle,,kg
-ex_lateral_raise,Lateral Raise,shoulders,,dumbbell,muscle,,kg
-ex_face_pull,Face Pull,shoulders,"rear delts,upper back",cable,muscle,,kg
-ex_plank,Plank,core,,bodyweight,muscle,,sec
-ex_ab_wheel,Ab Wheel Rollout,core,,bodyweight,muscle,,
-ex_hanging_leg_raise,Hanging Leg Raise,core,,bodyweight,muscle,,
-ex_hip_thrust,Hip Thrust,glutes,hamstrings,barbell,muscle,,kg
-ex_world_greatest,World's Greatest Stretch,full-body,,bodyweight,stretching,https://youtu.be/cM_5N5fY1k4,sec
-ex_joint_rotations,Joint Rotations,full-body,,bodyweight,warmup,,sec
-ex_leg_swing,Leg Swings,legs,hips,bodyweight,warmup,,
-ex_arm_circle,Arm Circles,shoulders,,bodyweight,warmup,,
-ex_hip_circle,Hip Circles,hips,core,bodyweight,warmup,,
-ex_cat_cow,Cat-Cow,core,lower back,bodyweight,stretching,,sec
-ex_pigeon,Pigeon Pose,hips,glutes,bodyweight,stretching,,sec
-ex_couch_stretch,Couch Stretch,hips,quads,bodyweight,stretching,,sec
-ex_run,Running,full-body,,other,cardio,,min
-ex_bike,Cycling,legs,,other,cardio,,min
-ex_row_machine,Rowing Machine,full-body,,machine,cardio,,min
-ex_jump_rope,Jump Rope,full-body,,other,cardio,,min
+ex_single_leg_press,Single Leg Press,legs,glutes,machine,muscle,,kg
+ex_leg_extension,Leg Extension,legs,,machine,muscle,,kg
+ex_single_leg_extension,Single Leg Extension,legs,,machine,muscle,,kg
+ex_sissy_squat,Sissy Squat,legs,,bodyweight,muscle,,
+ex_split_squat,Split Squat,legs,glutes,dumbbell,muscle,,kg
+ex_bulgarian_split_squat,Bulgarian Split Squat,legs,glutes,dumbbell,muscle,,kg
+ex_walking_lunge,Walking Lunge,legs,glutes,dumbbell,muscle,,kg
+ex_bb_walking_lunge,Barbell Walking Lunge,legs,"glutes,core",barbell,muscle,,kg
+ex_forward_lunge,Forward Lunge,legs,glutes,dumbbell,muscle,,kg
+ex_reverse_lunge_db,DB Reverse Lunge,legs,glutes,dumbbell,muscle,,kg
+ex_reverse_lunge_bb,Barbell Reverse Lunge,legs,"glutes,core",barbell,muscle,,kg
+ex_lateral_lunge,Lateral Lunge,legs,glutes,dumbbell,muscle,,kg
+ex_curtsy_lunge,Curtsy Lunge,legs,glutes,dumbbell,muscle,,kg
+ex_step_up,Step Up,legs,glutes,dumbbell,muscle,,kg
+ex_cossack_squat,Cossack Squat,legs,glutes,bodyweight,muscle,,
+ex_pistol_squat,Pistol Squat,legs,"glutes,core",bodyweight,muscle,,
+ex_wall_sit,Wall Sit,legs,,bodyweight,muscle,,sec
+ex_jumping_squat,Jumping Squat,legs,glutes,bodyweight,muscle,,
+ex_bb_deadlift,Barbell Deadlift,legs,"back,glutes,core",barbell,muscle,,kg
+ex_sumo_deadlift,Sumo Deadlift,legs,"back,glutes",barbell,muscle,,kg
+ex_conventional_deadlift,Conventional Deadlift,legs,"back,glutes,core",barbell,muscle,,kg
+ex_romanian_deadlift_bb,Romanian Deadlift,legs,"glutes,back",barbell,muscle,,kg
+ex_romanian_deadlift_db,DB Romanian Deadlift,legs,"glutes,back",dumbbell,muscle,,kg
+ex_stiff_leg_deadlift,Stiff-Leg Deadlift,legs,"glutes,back",barbell,muscle,,kg
+ex_trap_bar_deadlift,Trap Bar Deadlift,legs,"back,glutes,core",barbell,muscle,,kg
+ex_db_deadlift,DB Deadlift,legs,"back,glutes,core",dumbbell,muscle,,kg
+ex_single_leg_rdl,Single Leg Romanian Deadlift,legs,"glutes,core",dumbbell,muscle,,kg
+ex_kb_swing,Kettlebell Swing,legs,"glutes,core",kettlebell,muscle,,kg
+ex_seated_leg_curl,Seated Leg Curl,legs,,machine,muscle,,kg
+ex_lying_leg_curl,Lying Leg Curl,legs,,machine,muscle,,kg
+ex_standing_leg_curl,Standing Leg Curl,legs,,machine,muscle,,kg
+ex_nordic_curl,Nordic Hamstring Curl,legs,,bodyweight,muscle,,
+ex_hip_thrust_bb,Barbell Hip Thrust,glutes,legs,barbell,muscle,,kg
+ex_hip_thrust_db,DB Hip Thrust,glutes,legs,dumbbell,muscle,,kg
+ex_hip_thrust_machine,Hip Thrust Machine,glutes,legs,machine,muscle,,kg
+ex_glute_bridge_bb,Barbell Glute Bridge,glutes,legs,barbell,muscle,,kg
+ex_single_leg_glute_bridge,Single Leg Glute Bridge,glutes,"legs,core",bodyweight,muscle,,
+ex_cable_kickback,Cable Glute Kickback,glutes,legs,cable,muscle,,kg
+ex_cable_pull_through,Cable Pull Through,glutes,"legs,back",cable,muscle,,kg
+ex_hip_abduction_machine,Hip Abduction Machine,glutes,,machine,muscle,,kg
+ex_hip_adduction_machine,Hip Adduction Machine,legs,,machine,muscle,,kg
+ex_clamshell,Clamshell,glutes,,band,muscle,,
+ex_standing_calf_raise,Standing Calf Raise,legs,,machine,muscle,,kg
+ex_seated_calf_raise,Seated Calf Raises,legs,,machine,muscle,,kg
+ex_single_leg_calf_raise,Single Leg Calf Raises,legs,,bodyweight,muscle,,
+ex_db_calf_raise,DB Calf Raise,legs,,dumbbell,muscle,,kg
+ex_smith_calf_raise,Smith Machine Calf Raise,legs,,machine,muscle,,kg
+ex_donkey_calf_raise,Donkey Calf Raise,legs,,machine,muscle,,kg
+ex_tibialis_raise,Tibialis Raise,legs,,bodyweight,muscle,,
+ex_plank,Plank,core,shoulders,bodyweight,muscle,,sec
+ex_side_plank,Side Plank,core,shoulders,bodyweight,muscle,,sec
+ex_side_plank_rotation,Side Plank Rotations,core,shoulders,bodyweight,muscle,,
+ex_plank_jack,Plank Jack,core,shoulders,bodyweight,muscle,,
+ex_plank_to_pushup,Plank to Push-Up,core,"shoulders,chest",bodyweight,muscle,,
+ex_hollow_hold,Hollow Hold,core,,bodyweight,muscle,,sec
+ex_crunch,Crunch,core,,bodyweight,muscle,,
+ex_cross_crunch,Cross Crunches,core,,bodyweight,muscle,,
+ex_bicycle_crunch,Bicycle Crunch,core,,bodyweight,muscle,,
+ex_reverse_crunch,Reverse Crunch,core,,bodyweight,muscle,,
+ex_v_up,V-Up,core,,bodyweight,muscle,,
+ex_toes_to_bar,Toes to Bar,core,back,bodyweight,muscle,,
+ex_hanging_knee_tuck,Hanging Knee Tucks,core,back,bodyweight,muscle,,
+ex_hanging_leg_raise,Hanging Leg Raise,core,back,bodyweight,muscle,,
+ex_captains_chair_knee_raise,Captain's Chair Knee Raise,core,,machine,muscle,,
+ex_ab_wheel_rollout,Ab Wheel Rollout,core,shoulders,other,muscle,https://www.youtube.com/watch?v=zCsW9L2qi-0,
+ex_cable_crunch,Cable Crunch,core,,cable,muscle,,kg
+ex_kneeling_cable_crunch,Kneeling Cable Crunch,core,,cable,muscle,,kg
+ex_cable_woodchop,Cable Woodchop,core,shoulders,cable,muscle,,kg
+ex_pallof_press,Pallof Press,core,,cable,muscle,,kg
+ex_russian_twist_db,DB Russian Twist,core,,dumbbell,muscle,,kg
+ex_russian_twist_bw,Russian Twist,core,,bodyweight,muscle,,
+ex_mountain_climber,Mountain Climbers,core,"shoulders,legs",bodyweight,muscle,,
+ex_flutter_kick,Flutter Kick,core,,bodyweight,muscle,,
+ex_scissor_kick,Scissor Kick,core,,bodyweight,muscle,,
+ex_dragon_flag,Dragon Flag,core,,bodyweight,muscle,,
+ex_l_sit,L-Sit,core,arms,bodyweight,muscle,,sec
+ex_dead_bug_weighted,Weighted Dead Bug,core,,dumbbell,muscle,,kg
+ex_suitcase_carry,Suitcase Carry,core,forearms,dumbbell,muscle,,kg
+ex_burpee,Burpee,full-body,"chest,legs,core",bodyweight,muscle,,
+ex_full_burpee_modified,Full Burpee [Modified],full-body,"chest,legs,core",bodyweight,muscle,,
+ex_thruster,Thruster,full-body,"legs,shoulders",barbell,muscle,,kg
+ex_db_thruster,DB Thruster,full-body,"legs,shoulders",dumbbell,muscle,,kg
+ex_clean_power,Power Clean,full-body,"legs,back,shoulders",barbell,muscle,,kg
+ex_clean_and_press,Clean and Press,full-body,"legs,back,shoulders",barbell,muscle,,kg
+ex_snatch,Snatch,full-body,"legs,back,shoulders",barbell,muscle,,kg
+ex_kb_clean,Kettlebell Clean,full-body,"legs,back,shoulders",kettlebell,muscle,,kg
+ex_kb_snatch,Kettlebell Snatch,full-body,"legs,back,shoulders",kettlebell,muscle,,kg
+ex_kb_turkish_get_up,Turkish Get-Up,full-body,"core,shoulders",kettlebell,muscle,,kg
+ex_wall_ball,Wall Ball,full-body,"legs,shoulders",other,muscle,,kg
+ex_med_ball_slam,Medicine Ball Slam,full-body,"core,back",other,muscle,,kg
+ex_battle_ropes,Battle Ropes,full-body,"shoulders,core",other,muscle,,sec
+ex_sled_push,Sled Push,full-body,"legs,core",machine,muscle,,kg
+ex_sled_pull,Sled Pull,full-body,"back,legs",machine,muscle,,kg
+ex_knee_tuck_jump_easy,Knee Tuck Jumps [Easy Mode],legs,core,bodyweight,muscle,,
+ex_box_jump,Box Jump,legs,glutes,bodyweight,muscle,,
+ex_broad_jump,Broad Jump,legs,glutes,bodyweight,muscle,,
+ex_shuffle_tap,Shuffle Tap,legs,,bodyweight,muscle,,
+ex_squat_thrust,Squat Thrust,full-body,"legs,core",bodyweight,muscle,,
+ex_bear_walk,Bear Walk,full-body,"core,shoulders",bodyweight,muscle,,
+ex_jump_rope,Jump Rope,full-body,legs,other,cardio,,
+ex_double_unders,Double Unders,full-body,legs,other,cardio,,
+ex_treadmill_run,Treadmill Run,legs,full-body,machine,cardio,,min
+ex_treadmill_intervals,Treadmill Intervals,legs,full-body,machine,cardio,,min
+ex_outdoor_run,Outdoor Run,legs,full-body,bodyweight,cardio,,min
+ex_tempo_run,Tempo Run,legs,full-body,bodyweight,cardio,,min
+ex_long_run,Long Run,legs,full-body,bodyweight,cardio,,min
+ex_interval_run,Interval Run,legs,full-body,bodyweight,cardio,,min
+ex_hill_sprints,Hill Sprints,legs,full-body,bodyweight,cardio,,
+ex_track_sprints,Track Sprints,legs,full-body,bodyweight,cardio,,
+ex_zone_2_bike,Zone 2 Bike Session,legs,full-body,machine,cardio,,min
+ex_stationary_bike,Stationary Bike,legs,,machine,cardio,,min
+ex_spin_bike,Spin Bike,legs,,machine,cardio,,min
+ex_assault_bike,Assault Bike,full-body,legs,machine,cardio,,min
+ex_rowing_machine,Rowing Machine,full-body,"back,legs",machine,cardio,,min
+ex_ski_erg,Ski Erg,full-body,"back,core",machine,cardio,,min
+ex_elliptical,Elliptical,legs,full-body,machine,cardio,,min
+ex_stair_climber,Stair Climber,legs,glutes,machine,cardio,,min
+ex_incline_walk,Incline Walk,legs,,machine,cardio,,min
+ex_swim,Swim,full-body,,other,cardio,,min
+ex_futsal,Futsal,full-body,legs,other,cardio,,min
+ex_soccer,Soccer,full-body,legs,other,cardio,,min
+ex_cycling_outdoor,Outdoor Cycling,legs,full-body,other,cardio,,min
+ex_hike,Hike,legs,full-body,other,cardio,,min

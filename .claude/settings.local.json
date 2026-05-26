@@ -19,7 +19,9 @@
       "Bash(grep:*)",
       "Bash(rsvg-convert -w 512 -h 512 /tmp/icon.svg -o /home/aditya/Projects/iron-log/public/icons/icon-512.png)",
       "Bash(rsvg-convert -w 192 -h 192 /tmp/icon.svg -o /home/aditya/Projects/iron-log/public/icons/icon-192.png)",
-      "Bash(rsvg-convert -w 180 -h 180 public/icons/logo.svg -o public/icons/icon-180.png)"
+      "Bash(rsvg-convert -w 180 -h 180 public/icons/logo.svg -o public/icons/icon-180.png)",
+      "Bash(npm list:*)",
+      "Bash(node:*)"
     ]
   }
 }

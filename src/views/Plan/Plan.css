@@ -104,11 +104,7 @@
 }
 
 .plan-day-panel {
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
   padding: 14px 16px;
-  border-top: 1px solid var(--line);
 }
 
 .plan-day-panel__header {
@@ -281,4 +277,42 @@
   font-size: 10px;
   letter-spacing: 0.08em;
   color: var(--fg-mute);
+}
+
+/* ─── Collapsible calendar + unified body ────────────────────────────────────── */
+.plan-calendar-section {
+  flex-shrink: 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.plan-body {
+  flex: 1;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+}
+
+.plan-day-panel {
+  border-bottom: 2px solid var(--accent);
+  background: var(--surface);
+}
+
+.plan-list-day--selected {
+  background: rgba(255, 90, 31, 0.04);
+  border-left: 2px solid var(--accent);
+}
+
+.plan-list-selected-chip {
+  font-family: var(--mono);
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--accent);
+  background: rgba(255, 90, 31, 0.1);
+  border: 1px solid rgba(255, 90, 31, 0.25);
+  border-radius: 2px;
+  padding: 2px 6px;
 }
