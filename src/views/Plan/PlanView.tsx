@@ -3,9 +3,12 @@ import { useAllPlanDays } from '../../hooks/usePlanDay';
 import { putPlanDay, deletePlanDay } from '../../db/plan';
 import { getAllWorkouts } from '../../db/workouts';
 import { getAllSessions } from '../../db/sessions';
+import { getAllExercises } from '../../db/exercises';
 import { Modal } from '../../components/Modal/Modal';
+import { Topbar } from '../../components/Topbar/Topbar';
 import { getDaysInMonth, getFirstDayOfMonth, toISODate, formatDisplayDate, formatDuration } from '../../lib/date';
-import type { Workout, PlanDay, Session } from '../../types';
+import { extractYouTubeId } from '../../lib/youtube';
+import type { Workout, PlanDay, Session, Exercise } from '../../types';
 import './Plan.css';
 
 const now = new Date();
@@ -19,6 +22,7 @@ export function PlanView() {
   const [selectedDate, setSelectedDate] = useState<string | null>(null);
   const [pickerOpen, setPickerOpen] = useState(false);
   const [tab, setTab] = useState<PlanTab>('calendar');
+  const [viewingWorkout, setViewingWorkout] = useState<Workout | null>(null);
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [allSessions, setAllSessions] = useState<Session[]>([]);
   const { days, reload } = useAllPlanDays();
@@ -103,52 +107,65 @@ export function PlanView() {
     return doneIds;
   }
 
+  if (viewingWorkout) {
+    return (
+      <PlanWorkoutDetailView
+        workout={viewingWorkout}
+        onBack={() => setViewingWorkout(null)}
+      />
+    );
+  }
+
   return (
     <div className="plan-view">
-      {/* Header */}
-      <div className="plan-header">
-        <div className="plan-header__nav">
-          <button className="icon-btn" onClick={prevMonth} aria-label="Previous month">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="15 18 9 12 15 6" />
-            </svg>
-          </button>
-          <span className="plan-month">{monthName}</span>
-          <button className="icon-btn" onClick={nextMonth} aria-label="Next month">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <polyline points="9 18 15 12 9 6" />
-            </svg>
-          </button>
-        </div>
-        <div className="plan-header__right">
-          <button className="btn outline btn-sm" onClick={goToToday}>Today</button>
-          <div className="plan-tabs">
+      <Topbar
+        title="Plan"
+        right={
+          <div style={{ display: 'flex', gap: 2 }}>
             <button
-              className={`plan-tab${tab === 'calendar' ? ' plan-tab--active' : ''}`}
+              className={`icon-btn${tab === 'calendar' ? ' icon-btn--active' : ''}`}
               onClick={() => setTab('calendar')}
+              aria-label="Calendar view"
+              title="Calendar"
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <rect x="3" y="4" width="18" height="18" rx="2" />
                 <line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" />
                 <line x1="3" y1="10" x2="21" y2="10" />
               </svg>
-              Cal
             </button>
             <button
-              className={`plan-tab${tab === 'schedule' ? ' plan-tab--active' : ''}`}
+              className={`icon-btn${tab === 'schedule' ? ' icon-btn--active' : ''}`}
               onClick={() => setTab('schedule')}
+              aria-label="Schedule view"
+              title="Schedule"
             >
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" />
                 <line x1="8" y1="18" x2="21" y2="18" />
                 <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" />
                 <line x1="3" y1="18" x2="3.01" y2="18" />
               </svg>
-              List
             </button>
           </div>
-        </div>
-      </div>
+        }
+      />
+
+      {/* Month navigation sub-bar — calendar only */}
+      {tab === 'calendar' && <div className="plan-monthbar">
+        <button className="icon-btn" onClick={prevMonth} aria-label="Previous month">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="15 18 9 12 15 6" />
+          </svg>
+        </button>
+        <span className="plan-month">{monthName}</span>
+        <button className="icon-btn" onClick={nextMonth} aria-label="Next month">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        </button>
+        <button className="plan-today-btn" onClick={goToToday}>Today</button>
+      </div>}
 
       {/* ── Calendar tab ── */}
       {tab === 'calendar' && (
@@ -230,7 +247,12 @@ export function PlanView() {
                         const workout = workoutMap.get(pw.workoutId);
                         const isDone = doneIds.has(pw.workoutId);
                         return (
-                          <div key={pw.workoutId} className={`plan-workout-row${isDone ? ' plan-workout-row--done' : ''}`}>
+                          <div
+                            key={pw.workoutId}
+                            className={`plan-workout-row${isDone ? ' plan-workout-row--done' : ''}`}
+                            style={{ cursor: workout ? 'pointer' : undefined }}
+                            onClick={() => workout && setViewingWorkout(workout)}
+                          >
                             <div style={{ flex: 1, minWidth: 0 }}>
                               <div className="plan-workout-row__name">
                                 {isDone && <span className="plan-done-check">✓ </span>}
@@ -241,11 +263,13 @@ export function PlanView() {
                                 {isDone ? ' · Done' : ''}
                               </div>
                             </div>
-                            <button className="icon-btn" onClick={() => removeWorkoutFromDay(selectedDate, pw.workoutId)} aria-label="Remove">
-                              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
-                              </svg>
-                            </button>
+                            <div style={{ display: 'flex', gap: 6, alignItems: 'center' }} onClick={e => e.stopPropagation()}>
+                              <button className="icon-btn" onClick={() => removeWorkoutFromDay(selectedDate, pw.workoutId)} aria-label="Remove">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                                  <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+                                </svg>
+                              </button>
+                            </div>
                           </div>
                         );
                       })}
@@ -299,7 +323,12 @@ export function PlanView() {
                       const workout = workoutMap.get(pw.workoutId);
                       const isDone = doneIds.has(pw.workoutId);
                       return (
-                        <div key={pw.workoutId} className={`plan-list-entry${isDone ? ' plan-list-entry--done' : ''}`}>
+                        <div
+                          key={pw.workoutId}
+                          className={`plan-list-entry${isDone ? ' plan-list-entry--done' : ''}`}
+                          style={{ cursor: workout ? 'pointer' : undefined }}
+                          onClick={() => workout && setViewingWorkout(workout)}
+                        >
                           <div className={`plan-list-entry__dot${isDone ? ' done' : ''}`} />
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div className="plan-list-entry__name">{workout?.name ?? pw.workoutId}</div>
@@ -308,6 +337,11 @@ export function PlanView() {
                               {isDone ? ' · Done' : ' · Planned'}
                             </div>
                           </div>
+                          {workout && (
+                            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fg-mute)" strokeWidth="2">
+                              <polyline points="9 18 15 12 9 6" />
+                            </svg>
+                          )}
                         </div>
                       );
                     })}
@@ -364,6 +398,107 @@ export function PlanView() {
           </div>
         )}
       </Modal>
+    </div>
+  );
+}
+
+// ─── Plan Workout Detail View ─────────────────────────────────────────────────
+
+const PLAN_GROUP_CLASS: Record<string, string> = {
+  warmup: 'g-warmup', mobility: 'g-mobility', activation: 'g-activation',
+  main: 'g-main', accessory: 'g-accessory', cardio: 'g-cardio', cooldown: 'g-cooldown',
+};
+
+function PlanWorkoutDetailView({ workout, onBack }: { workout: Workout; onBack: () => void }) {
+  const [exerciseMap, setExerciseMap] = useState<Map<string, Exercise>>(new Map());
+  const [miniVideoUrl, setMiniVideoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    getAllExercises().then(all => setExerciseMap(new Map(all.map(e => [e.id, e]))));
+  }, []);
+
+  return (
+    <div className="workout-editor">
+      <Topbar title={workout.name} onBack={onBack} />
+
+      <div className="workout-editor__body">
+        {workout.notes && (
+          <div style={{ padding: '0 20px 16px', color: 'var(--fg-dim)', fontSize: 14, lineHeight: 1.55 }}>
+            {workout.notes}
+          </div>
+        )}
+        {workout.groups.map(group => {
+          const groupClass = PLAN_GROUP_CLASS[group.groupType] ?? 'g-main';
+          return (
+            <div key={group.id} className={`group ${groupClass} group-editor`}>
+              <div className="group-head group-editor__header">
+                <span className="gname">{group.name}</span>
+                <span className="gmeta" style={{ marginLeft: 'auto' }}>
+                  {group.blocks.length} exercise{group.blocks.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              {group.blocks.length === 0 && (
+                <div style={{ color: 'var(--fg-mute)', fontFamily: 'var(--mono)', fontSize: 11, padding: '6px 0 8px', letterSpacing: '0.08em' }}>
+                  No exercises
+                </div>
+              )}
+              {group.blocks.map(block => {
+                const ex = exerciseMap.get(block.exerciseId);
+                const videoId = ex?.videoUrl ? extractYouTubeId(ex.videoUrl) : null;
+                return (
+                  <div key={block.id} className="viewer-block-row">
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span className="block-row__name">{ex?.name ?? block.exerciseId}</span>
+                        {videoId && (
+                          <button
+                            className="video-play-btn"
+                            onClick={() => setMiniVideoUrl(miniVideoUrl === ex!.videoUrl ? null : ex!.videoUrl!)}
+                            aria-label="Play video"
+                          >
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor">
+                              <polygon points="5,3 19,12 5,21" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="viewer-block-row__targets">
+                      {block.targetSets != null && <span className="viewer-target">{block.targetSets} sets</span>}
+                      {block.targetReps != null && <span className="viewer-target">{block.targetReps} reps</span>}
+                      {block.targetWeight != null && <span className="viewer-target">{block.targetWeight} kg</span>}
+                      {block.targetTime != null && <span className="viewer-target">{block.targetTime}s</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+
+      {/* Mini video player */}
+      {miniVideoUrl && (() => {
+        const videoId = extractYouTubeId(miniVideoUrl);
+        if (!videoId) return null;
+        return (
+          <div className="mini-player">
+            <div className="mini-player__video">
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+              />
+            </div>
+            <button className="mini-player__close" onClick={() => setMiniVideoUrl(null)} aria-label="Close video">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        );
+      })()}
     </div>
   );
 }

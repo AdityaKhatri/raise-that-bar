@@ -6,31 +6,13 @@
 }
 
 .exercises-header {
-  padding: 0 0 0 0;
   display: flex;
   flex-direction: column;
-  gap: 0;
   flex-shrink: 0;
   background: var(--bg);
   border-bottom: 1px solid var(--line);
 }
 
-.exercises-header-top {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 12px 20px 14px;
-  padding-top: calc(12px + env(safe-area-inset-top, 0px));
-  border-bottom: 1px solid var(--line);
-}
-.exercises-header-top .crumb {
-  flex: 1;
-  font-family: var(--mono);
-  font-size: 11px;
-  letter-spacing: 0.18em;
-  text-transform: uppercase;
-  color: var(--fg-mute);
-}
 
 .exercises-search-row {
   padding: 12px 20px 10px;

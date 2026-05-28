@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LogoMark } from '../../components/Logo/Logo';
+import { Topbar } from '../../components/Topbar/Topbar';
 import { SearchBar } from '../../components/SearchBar/SearchBar';
 import { FilterChips } from '../../components/FilterChips/FilterChips';
 import { ExerciseCard } from './ExerciseCard';
@@ -50,49 +50,50 @@ export function ExercisesView({ onOpenEditor }: { onOpenEditor?: () => void }) {
   return (
     <div className="exercises-view">
       <div className="exercises-header">
-        <div className="exercises-header-top">
-          <LogoMark size={18} />
-          <span className="crumb">Library</span>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <button className="icon-btn" onClick={() => setAddOpen(true)} aria-label="Add exercise" title="Add exercise">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-              </svg>
-            </button>
-            {onOpenEditor && (
-              <button className="icon-btn" onClick={onOpenEditor} aria-label="Bulk editor" title="Bulk editor">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
-                  <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+        <Topbar
+          title="Library"
+          right={
+            <div style={{ display: 'flex', gap: 4 }}>
+              <button className="icon-btn" onClick={() => setAddOpen(true)} aria-label="Add exercise" title="Add exercise">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                  <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
                 </svg>
               </button>
-            )}
-            <div style={{ position: 'relative' }}>
-            <button className="icon-btn" onClick={() => setMenuOpen(m => !m)} aria-label="Menu">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="12" cy="5" r="1" fill="currentColor" />
-                  <circle cx="12" cy="12" r="1" fill="currentColor" />
-                  <circle cx="12" cy="19" r="1" fill="currentColor" />
-                </svg>
-              </button>
-              {menuOpen && (
-                <div className="ex-menu-dropdown">
-                  <LibrarySyncButton onSynced={() => { reload(); }} />
-                  <div className="divider" style={{ margin: '6px 0' }} />
-                  <CsvImportButton onImported={() => { reload(); setMenuOpen(false); }} />
-                  <div className="divider" style={{ margin: '6px 0' }} />
-                  <button
-                    className="btn ghost btn-sm btn-full"
-                    style={{ justifyContent: 'flex-start', flex: 'none', width: '100%' }}
-                    onClick={() => { setShowArchived(s => !s); setMenuOpen(false); }}
-                  >
-                    {showArchived ? 'Hide Archived' : 'Show Archived'}
-                  </button>
-                </div>
+              {onOpenEditor && (
+                <button className="icon-btn" onClick={onOpenEditor} aria-label="Bulk editor" title="Bulk editor">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+                    <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+                  </svg>
+                </button>
               )}
+              <div style={{ position: 'relative' }}>
+                <button className="icon-btn" onClick={() => setMenuOpen(m => !m)} aria-label="Menu">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                    <circle cx="12" cy="5" r="1" fill="currentColor" />
+                    <circle cx="12" cy="12" r="1" fill="currentColor" />
+                    <circle cx="12" cy="19" r="1" fill="currentColor" />
+                  </svg>
+                </button>
+                {menuOpen && (
+                  <div className="ex-menu-dropdown">
+                    <LibrarySyncButton onSynced={() => { reload(); }} />
+                    <div className="divider" style={{ margin: '6px 0' }} />
+                    <CsvImportButton onImported={() => { reload(); setMenuOpen(false); }} />
+                    <div className="divider" style={{ margin: '6px 0' }} />
+                    <button
+                      className="btn ghost btn-sm btn-full"
+                      style={{ justifyContent: 'flex-start', flex: 'none', width: '100%' }}
+                      onClick={() => { setShowArchived(s => !s); setMenuOpen(false); }}
+                    >
+                      {showArchived ? 'Hide Archived' : 'Show Archived'}
+                    </button>
+                  </div>
+                )}
+              </div>
             </div>
-          </div>
-        </div>
+          }
+        />
 
         <div className="exercises-search-row">
           <SearchBar value={search} onChange={setSearch} placeholder="Search exercises…" />

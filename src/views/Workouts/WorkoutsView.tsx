@@ -9,9 +9,10 @@ import { ShareModal } from '../../components/ShareModal/ShareModal';
 import { ScanModal } from '../../components/ScanModal/ScanModal';
 import { ImportSheet } from '../../components/ImportSheet/ImportSheet';
 import { AIImportSheet } from '../../components/AIImportSheet/AIImportSheet';
-import { LogoMark } from '../../components/Logo/Logo';
+import { Topbar } from '../../components/Topbar/Topbar';
 import { decodeWorkoutPayload, previewImport } from '../../lib/share';
 import type { SharePayload, ImportPreview } from '../../lib/share';
+import { extractYouTubeId } from '../../lib/youtube';
 import { uid } from '../../lib/ids';
 import type { Workout, WorkoutGroup, WorkoutBlock, Exercise } from '../../types';
 import './Workouts.css';
@@ -112,34 +113,35 @@ export function WorkoutsView() {
 
   return (
     <div className="workouts-view">
-      <div className="topbar">
-        <LogoMark size={20} />
-        <span className="crumb">Workouts</span>
-        <div style={{ display: 'flex', gap: 4 }}>
-          <button className="icon-btn" onClick={() => setAiImporting(true)} aria-label="Import from AI" title="Import from AI">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 0 6h-1v1a4 4 0 0 1-8 0v-1H7a3 3 0 0 1 0-6h1V6a4 4 0 0 1 4-4z"/>
-              <line x1="9" y1="12" x2="15" y2="12"/><line x1="12" y1="9" x2="12" y2="15"/>
-            </svg>
-          </button>
-          <button className="icon-btn" onClick={() => setScanning(true)} aria-label="Scan QR code" title="Scan QR code">
-            <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-              <rect x="3" y="3" width="7" height="7" rx="1" />
-              <rect x="14" y="3" width="7" height="7" rx="1" />
-              <rect x="3" y="14" width="7" height="7" rx="1" />
-              <rect x="14" y="14" width="3" height="3" rx="0.5" />
-              <rect x="18" y="14" width="3" height="3" rx="0.5" />
-              <rect x="14" y="18" width="3" height="3" rx="0.5" />
-              <rect x="18" y="18" width="3" height="3" rx="0.5" />
-            </svg>
-          </button>
-          <button className="icon-btn" onClick={createWorkout} aria-label="New workout" title="New workout">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-            </svg>
-          </button>
-        </div>
-      </div> {/* end topbar */}
+      <Topbar
+        title="Workouts"
+        right={
+          <div style={{ display: 'flex', gap: 4 }}>
+            <button className="icon-btn" onClick={() => setAiImporting(true)} aria-label="Import from AI" title="Import from AI">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 0 6h-1v1a4 4 0 0 1-8 0v-1H7a3 3 0 0 1 0-6h1V6a4 4 0 0 1 4-4z"/>
+                <line x1="9" y1="12" x2="15" y2="12"/><line x1="12" y1="9" x2="12" y2="15"/>
+              </svg>
+            </button>
+            <button className="icon-btn" onClick={() => setScanning(true)} aria-label="Scan QR code" title="Scan QR code">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="7" height="7" rx="1" />
+                <rect x="14" y="3" width="7" height="7" rx="1" />
+                <rect x="3" y="14" width="7" height="7" rx="1" />
+                <rect x="14" y="14" width="3" height="3" rx="0.5" />
+                <rect x="18" y="14" width="3" height="3" rx="0.5" />
+                <rect x="14" y="18" width="3" height="3" rx="0.5" />
+                <rect x="18" y="18" width="3" height="3" rx="0.5" />
+              </svg>
+            </button>
+            <button className="icon-btn" onClick={createWorkout} aria-label="New workout" title="New workout">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+              </svg>
+            </button>
+          </div>
+        }
+      />
 
       {sharing && (
         <ShareModal workout={sharing} onClose={() => setSharing(null)} />
@@ -221,7 +223,7 @@ export function WorkoutsView() {
           </div>
         ) : (
           workouts.map(w => (
-            <div key={w.id} className="workout-card" onClick={() => confirmDelete !== w.id && setViewing(w)}>
+            <div key={w.id} className="workout-card" onClick={() => setViewing(w)}>
               <div className="workout-card__info">
                 <div className="workout-card__name">{w.name}</div>
                 <div className="workout-card__meta">
@@ -229,44 +231,56 @@ export function WorkoutsView() {
                   {w.groups.reduce((a, g) => a + g.blocks.length, 0)} exercises
                 </div>
               </div>
-
-              {confirmDelete === w.id ? (
-                <div className="workout-card__delete-confirm" onClick={e => e.stopPropagation()}>
-                  <span className="workout-card__delete-label">Delete?</span>
-                  <button className="btn btn-sm" style={{ color: '#fc8181', borderColor: '#5a2d2d' }} onClick={() => handleDelete(w.id)}>Yes</button>
-                  <button className="btn btn-sm" onClick={() => setConfirmDelete(null)}>No</button>
-                </div>
-              ) : (
-                <>
-                  <button
-                    className="icon-btn"
-                    aria-label="Share workout"
-                    onClick={e => { e.stopPropagation(); setSharing(w); }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                    </svg>
-                  </button>
-                  <button
-                    className="icon-btn"
-                    aria-label="Delete workout"
-                    onClick={e => { e.stopPropagation(); setConfirmDelete(w.id); }}
-                  >
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-                    </svg>
-                  </button>
-                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fg-mute)" strokeWidth="2">
-                    <polyline points="9 18 15 12 9 6" />
-                  </svg>
-                </>
-              )}
+              <button
+                className="icon-btn"
+                aria-label="Share workout"
+                onClick={e => { e.stopPropagation(); setSharing(w); }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                </svg>
+              </button>
+              <button
+                className="icon-btn"
+                aria-label="Delete workout"
+                onClick={e => { e.stopPropagation(); setConfirmDelete(w.id); }}
+              >
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                </svg>
+              </button>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fg-mute)" strokeWidth="2">
+                <polyline points="9 18 15 12 9 6" />
+              </svg>
             </div>
           ))
         )}
       </div>
+
+      {/* Delete confirm sheet */}
+      {confirmDelete && (() => {
+        const w = workouts.find(x => x.id === confirmDelete);
+        return (
+          <div className="confirm-overlay" onClick={() => setConfirmDelete(null)}>
+            <div className="confirm-sheet" onClick={e => e.stopPropagation()}>
+              <h3>Delete workout?</h3>
+              <p>"{w?.name}" will be permanently removed. This cannot be undone.</p>
+              <div className="confirm-actions">
+                <button className="btn outline btn-full" onClick={() => setConfirmDelete(null)}>Cancel</button>
+                <button
+                  className="btn btn-full"
+                  style={{ background: '#E53E3E', borderColor: '#E53E3E', color: '#fff' }}
+                  onClick={() => handleDelete(confirmDelete)}
+                >
+                  Delete
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -278,23 +292,27 @@ function WorkoutViewer({ workout, onBack, onEdit }: {
   onBack: () => void;
   onEdit: () => void;
 }) {
-  const [exerciseMap, setExerciseMap] = useState<Map<string, string>>(new Map());
+  const [exerciseMap, setExerciseMap] = useState<Map<string, Exercise>>(new Map());
+  const [miniVideoUrl, setMiniVideoUrl] = useState<string | null>(null);
 
   useEffect(() => {
-    getAllExercises().then(all => setExerciseMap(new Map(all.map(e => [e.id, e.name]))));
+    getAllExercises().then(all => setExerciseMap(new Map(all.map(e => [e.id, e]))));
   }, []);
 
   return (
     <div className="workout-editor">
-      <div className="workout-editor__header">
-        <button className="icon-btn" onClick={onBack} aria-label="Back">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
-        <span className="crumb" style={{ flex: 1, paddingLeft: 8 }}>{workout.name}</span>
-        <button className="btn primary btn-sm" onClick={onEdit}>Edit</button>
-      </div>
+      <Topbar
+        title={workout.name}
+        onBack={onBack}
+        right={
+          <button className="icon-btn" onClick={onEdit} aria-label="Edit workout" title="Edit">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+              <path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/>
+              <path d="M18.5 2.5a2.121 2.121 0 0 1 3 3L12 15l-4 1 1-4 9.5-9.5z"/>
+            </svg>
+          </button>
+        }
+      />
 
       <div className="workout-editor__body">
         {workout.notes && (
@@ -315,21 +333,63 @@ function WorkoutViewer({ workout, onBack, onEdit }: {
                   No exercises
                 </div>
               )}
-              {group.blocks.map(block => (
-                <div key={block.id} className="viewer-block-row">
-                  <span className="block-row__name">{exerciseMap.get(block.exerciseId) ?? block.exerciseId}</span>
-                  <div className="viewer-block-row__targets">
-                    {block.targetSets != null && <span className="viewer-target">{block.targetSets} sets</span>}
-                    {block.targetReps != null && <span className="viewer-target">{block.targetReps} reps</span>}
-                    {block.targetWeight != null && <span className="viewer-target">{block.targetWeight} kg</span>}
-                    {block.targetTime != null && <span className="viewer-target">{block.targetTime}s</span>}
+              {group.blocks.map(block => {
+                const ex = exerciseMap.get(block.exerciseId);
+                const videoId = ex?.videoUrl ? extractYouTubeId(ex.videoUrl) : null;
+                return (
+                  <div key={block.id} className="viewer-block-row">
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span className="block-row__name">{ex?.name ?? block.exerciseId}</span>
+                        {videoId && (
+                          <button
+                            className="video-play-btn"
+                            onClick={() => setMiniVideoUrl(miniVideoUrl === ex!.videoUrl ? null : ex!.videoUrl!)}
+                            aria-label="Play video"
+                          >
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor">
+                              <polygon points="5,3 19,12 5,21" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="viewer-block-row__targets">
+                      {block.targetSets != null && <span className="viewer-target">{block.targetSets} sets</span>}
+                      {block.targetReps != null && <span className="viewer-target">{block.targetReps} reps</span>}
+                      {block.targetWeight != null && <span className="viewer-target">{block.targetWeight} kg</span>}
+                      {block.targetTime != null && <span className="viewer-target">{block.targetTime}s</span>}
+                    </div>
                   </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
           );
         })}
       </div>
+
+      {/* Mini video player */}
+      {miniVideoUrl && (() => {
+        const videoId = extractYouTubeId(miniVideoUrl);
+        if (!videoId) return null;
+        return (
+          <div className="mini-player">
+            <div className="mini-player__video">
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+              />
+            </div>
+            <button className="mini-player__close" onClick={() => setMiniVideoUrl(null)} aria-label="Close video">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        );
+      })()}
     </div>
   );
 }
@@ -549,19 +609,15 @@ function WorkoutEditor({ workout, onSave, onBack, onDiscard }: {
 
   return (
     <div className="workout-editor">
-      <div className="workout-editor__header">
-        <button className="icon-btn" onClick={onBack} aria-label="Back">
-          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-            <polyline points="15 18 9 12 15 6" />
-          </svg>
-        </button>
-        <span className="crumb" style={{ flex: 1, paddingLeft: 8 }}>{name || 'Workout'}</span>
-        {dirty && (
+      <Topbar
+        title={name || 'Workout'}
+        onBack={onBack}
+        right={dirty ? (
           <span style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--accent)', letterSpacing: '0.1em' }}>
             UNSAVED
           </span>
-        )}
-      </div>
+        ) : undefined}
+      />
 
       <div className="workout-editor__body">
         <div className="editor-name-wrap">

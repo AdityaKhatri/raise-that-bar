@@ -7,11 +7,9 @@ if ('serviceWorker' in navigator) {
   });
 }
 
-// Apply saved theme before first render
-const savedTheme = localStorage.getItem('iron_log_theme');
-if (savedTheme === 'light') {
-  document.documentElement.setAttribute('data-theme', 'light');
-}
+// Apply saved theme before first render (avoids flash)
+import { applyTheme } from './lib/theme';
+applyTheme();
 
 import { ActiveSessionProvider } from './context/ActiveSessionContext';
 import { PreferencesProvider } from './context/PreferencesContext';

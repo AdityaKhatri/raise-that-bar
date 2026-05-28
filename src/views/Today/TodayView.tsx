@@ -7,8 +7,8 @@ import { getSessionsByDate } from '../../db/sessions';
 import { getAllExercises } from '../../db/exercises';
 import { Modal } from '../../components/Modal/Modal';
 import { SearchBar } from '../../components/SearchBar/SearchBar';
+import { Topbar } from '../../components/Topbar/Topbar';
 import { CategoryIcon, CATEGORY_COLOR, CATEGORY_LABEL } from '../../components/CategoryIcon/CategoryIcon';
-import { LogoMark, LogoFull } from '../../components/Logo/Logo';
 import { today, formatDisplayDate, formatDuration } from '../../lib/date';
 import { extractYouTubeId } from '../../lib/youtube';
 import { uid } from '../../lib/ids';
@@ -16,6 +16,34 @@ import type { Session, SessionGroup, SessionBlock, SessionSet, Workout, Exercise
 import './Today.css';
 
 const TODAY = today();
+
+const QUOTES = [
+  "The only bad workout is the one that didn't happen.",
+  "Push yourself, because no one else is going to do it for you.",
+  "Your body can stand almost anything. It's your mind you have to convince.",
+  "Strength doesn't come from what you can do — it comes from overcoming what you thought you couldn't.",
+  "The pain you feel today will be the strength you feel tomorrow.",
+  "Success isn't always about greatness. It's about consistency.",
+  "You don't have to be great to start, but you have to start to be great.",
+  "No matter how slow you go, you are still lapping everyone on the couch.",
+  "Discipline is choosing between what you want now and what you want most.",
+  "Champions keep playing until they get it right.",
+  "Every rep counts. Every session adds up.",
+  "Show up. Do the work. Trust the process.",
+];
+
+function getDailyQuote(): string {
+  const seed = new Date().toDateString();
+  let hash = 0;
+  for (let i = 0; i < seed.length; i++) hash = (hash * 31 + seed.charCodeAt(i)) | 0;
+  return QUOTES[Math.abs(hash) % QUOTES.length];
+}
+
+function getGreeting(name: string): string {
+  const h = new Date().getHours();
+  const timeGreet = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+  return name ? `${timeGreet}, ${name.split(' ')[0]}` : timeGreet;
+}
 
 const GROUP_CLASS: Record<string, string> = {
   warmup: 'g-warmup',
@@ -65,6 +93,7 @@ export function TodayView() {
   // Finished sessions logged today, keyed by workoutId
   const [doneSessions, setDoneSessions] = useState<Map<string, Session>>(new Map());
   const [viewingWorkout, setViewingWorkout] = useState<Workout | null>(null);
+  const [profileName, setProfileName] = useState('');
 
   // Load finished sessions for today to detect which planned workouts are done
   useEffect(() => {
@@ -78,6 +107,10 @@ export function TodayView() {
       setDoneSessions(map);
     });
   }, [session]); // re-run whenever active session changes (e.g. after finishing)
+
+  useEffect(() => {
+    import('../../db/meta').then(m => m.getProfile()).then(p => { if (p.name) setProfileName(p.name); });
+  }, []);
 
   async function startFreestyle() {
     const s: Session = {
@@ -118,16 +151,23 @@ export function TodayView() {
 
   if (session && !paused) return <ActiveSessionView />;
 
+  if (viewingWorkout) {
+    return (
+      <WorkoutDetailPage
+        workout={viewingWorkout}
+        onBack={() => setViewingWorkout(null)}
+        onStart={() => { setViewingWorkout(null); startFromTemplate(viewingWorkout.id); }}
+      />
+    );
+  }
+
   // Build day-of-week + date crumb
   const dateObj = new Date(TODAY + 'T00:00:00');
   const dayAbbr = dateObj.toLocaleDateString(undefined, { weekday: 'short' }).toUpperCase();
 
   return (
     <div className="today-view">
-      <div className="topbar">
-        <LogoMark size={20} />
-        <span className="crumb">{dayAbbr} · {TODAY}</span>
-      </div>
+      <Topbar title={`${dayAbbr} · ${TODAY}`} />
 
       {paused && session && (
         <div className="session-resume-banner">
@@ -143,7 +183,8 @@ export function TodayView() {
 
       <div className="today-idle">
         <div className="today-hero">
-          <LogoFull markSize={48} />
+          <div className="today-greeting">{getGreeting(profileName)}</div>
+          <div className="today-quote">"{getDailyQuote()}"</div>
           <div className="today-hero-date">{formatDisplayDate(TODAY)}</div>
         </div>
 
@@ -175,7 +216,6 @@ export function TodayView() {
                   workoutId={pw.workoutId}
                   note={pw.note}
                   doneSession={doneSession}
-                  onStart={() => startFromTemplate(pw.workoutId)}
                   onEdit={() => resumeSession(doneSession!)}
                   onView={w => setViewingWorkout(w)}
                 />
@@ -199,29 +239,29 @@ export function TodayView() {
   );
 }
 
-function PlannedWorkoutCard({ workoutId, note, doneSession, onStart, onEdit }: {
+function PlannedWorkoutCard({ workoutId, note, doneSession, onEdit, onView }: {
   workoutId: string;
   note: string;
   doneSession: Session | null;
-  onStart: () => void;
   onEdit: () => void;
+  onView: (w: Workout) => void;
 }) {
-  const [name, setName] = useState(workoutId);
-  const [exCount, setExCount] = useState<number | null>(null);
+  const [workout, setWorkout] = useState<Workout | null>(null);
 
   useEffect(() => {
-    getWorkout(workoutId).then(w => {
-      if (w) {
-        setName(w.name);
-        setExCount(w.groups.reduce((a, g) => a + g.blocks.length, 0));
-      }
-    });
+    getWorkout(workoutId).then(w => { if (w) setWorkout(w); });
   }, [workoutId]);
 
   const isDone = doneSession !== null;
+  const name = workout?.name ?? workoutId;
+  const exCount = workout ? workout.groups.reduce((a, g) => a + g.blocks.length, 0) : null;
 
   return (
-    <div className={`plan-card${isDone ? ' plan-card--done' : ''}`}>
+    <div
+      className={`plan-card${isDone ? ' plan-card--done' : ''}`}
+      style={{ cursor: 'pointer' }}
+      onClick={() => workout && onView(workout)}
+    >
       <div style={{ flex: 1 }}>
         <div className="plan-card__name">{name}</div>
         <div className="plan-card__meta">
@@ -230,19 +270,23 @@ function PlannedWorkoutCard({ workoutId, note, doneSession, onStart, onEdit }: {
           {isDone && doneSession.durationMs ? ` · ${formatDuration(doneSession.durationMs)}` : ''}
         </div>
       </div>
-      {isDone ? (
-        <div className="plan-card__done-actions">
-          <span className="plan-card__done-badge">
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
-              <polyline points="20 6 9 17 4 12" />
-            </svg>
-            Done
-          </span>
-          <button className="btn outline btn-sm" style={{ flex: 'none' }} onClick={onEdit}>Edit</button>
-        </div>
-      ) : (
-        <button className="btn primary btn-sm" style={{ flex: 'none' }} onClick={onStart}>Start</button>
-      )}
+      <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
+        {isDone ? (
+          <>
+            <span className="plan-card__done-badge">
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+              Done
+            </span>
+            <button className="btn outline btn-sm" onClick={onEdit}>Edit</button>
+          </>
+        ) : (
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fg-mute)" strokeWidth="2">
+            <polyline points="9 18 15 12 9 6" />
+          </svg>
+        )}
+      </div>
     </div>
   );
 }
@@ -371,19 +415,31 @@ function ActiveSessionView() {
   function logSet(groupId: string, block: SessionBlock) {
     const si = block.sets.findIndex(st => !st.completed);
     if (si < 0) return;
-    updateSet(groupId, block.id, si, { completed: true });
+    const logged = block.sets[si];
+    const nextIdx = si + 1;
+    const groups = s.groups.map(g => {
+      if (g.id !== groupId) return g;
+      return {
+        ...g,
+        blocks: g.blocks.map(b => {
+          if (b.id !== block.id) return b;
+          const sets = b.sets.map((set, i) => {
+            if (i === si) return { ...set, completed: true };
+            // Pre-fill the immediately next set with the just-logged values
+            if (i === nextIdx) return { ...set, weight: logged.weight, reps: logged.reps, time: logged.time };
+            return set;
+          });
+          return { ...b, sets };
+        }),
+      };
+    });
+    updateSession({ ...s, groups });
     if (si === block.sets.length - 1) setExpandedBlock(null);
   }
 
   return (
     <div className="today-view">
-      {/* Topbar */}
-      <div className="topbar">
-        <LogoMark size={18} />
-        <span className="crumb">
-          {isEditing ? 'Session / Editing' : 'Session / In Progress'}
-        </span>
-      </div>
+      <Topbar title={isEditing ? 'Session / Editing' : 'Session / In Progress'} />
 
       {/* Editing banner */}
       {isEditing && (
@@ -790,6 +846,117 @@ function SessionExercisePicker({ open, onClose, onPick }: {
         )}
       </div>
     </Modal>
+  );
+}
+
+// ─── Workout Detail Page (read-only, full screen) ────────────────────────────
+
+const WORKOUT_GROUP_CLASS: Record<string, string> = {
+  warmup: 'g-warmup', mobility: 'g-mobility', activation: 'g-activation',
+  main: 'g-main', accessory: 'g-accessory', cardio: 'g-cardio', cooldown: 'g-cooldown',
+};
+
+function WorkoutDetailPage({ workout, onBack, onStart }: {
+  workout: Workout;
+  onBack: () => void;
+  onStart?: () => void;
+}) {
+  const [exerciseMap, setExerciseMap] = useState<Map<string, Exercise>>(new Map());
+  const [miniVideoUrl, setMiniVideoUrl] = useState<string | null>(null);
+
+  useEffect(() => {
+    getAllExercises().then(all => setExerciseMap(new Map(all.map(e => [e.id, e]))));
+  }, []);
+
+  return (
+    <div className="workout-editor">
+      <Topbar title={workout.name} onBack={onBack} />
+
+      <div className="workout-editor__body">
+        {workout.notes && (
+          <div style={{ padding: '0 20px 16px', color: 'var(--fg-dim)', fontSize: 14, lineHeight: 1.55 }}>
+            {workout.notes}
+          </div>
+        )}
+        {workout.groups.map(group => {
+          const groupClass = WORKOUT_GROUP_CLASS[group.groupType] ?? 'g-main';
+          return (
+            <div key={group.id} className={`group ${groupClass} group-editor`}>
+              <div className="group-head group-editor__header">
+                <span className="gname">{group.name}</span>
+                <span className="gmeta" style={{ marginLeft: 'auto' }}>
+                  {group.blocks.length} exercise{group.blocks.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+              {group.blocks.length === 0 && (
+                <div style={{ color: 'var(--fg-mute)', fontFamily: 'var(--mono)', fontSize: 11, padding: '6px 0 8px', letterSpacing: '0.08em' }}>
+                  No exercises
+                </div>
+              )}
+              {group.blocks.map(block => {
+                const ex = exerciseMap.get(block.exerciseId);
+                return (
+                  <div key={block.id} className="viewer-block-row">
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                        <span className="block-row__name">{ex?.name ?? block.exerciseId}</span>
+                        {ex?.videoUrl && (
+                          <button
+                            className="video-play-btn"
+                            onClick={() => setMiniVideoUrl(miniVideoUrl === ex.videoUrl ? null : ex.videoUrl!)}
+                            aria-label="Play video"
+                          >
+                            <svg width="9" height="9" viewBox="0 0 24 24" fill="currentColor">
+                              <polygon points="5,3 19,12 5,21" />
+                            </svg>
+                          </button>
+                        )}
+                      </div>
+                    </div>
+                    <div className="viewer-block-row__targets">
+                      {block.targetSets != null && <span className="viewer-target">{block.targetSets} sets</span>}
+                      {block.targetReps != null && <span className="viewer-target">{block.targetReps} reps</span>}
+                      {block.targetWeight != null && <span className="viewer-target">{block.targetWeight} kg</span>}
+                      {block.targetTime != null && <span className="viewer-target">{block.targetTime}s</span>}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+
+      {onStart && (
+        <div className="workout-editor__footer">
+          <button className="btn primary btn-full" onClick={onStart}>
+            Start Workout
+          </button>
+        </div>
+      )}
+
+      {miniVideoUrl && (() => {
+        const videoId = extractYouTubeId(miniVideoUrl);
+        if (!videoId) return null;
+        return (
+          <div className="mini-player">
+            <div className="mini-player__video">
+              <iframe
+                src={`https://www.youtube-nocookie.com/embed/${videoId}?autoplay=1&rel=0&modestbranding=1`}
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                style={{ position: 'absolute', inset: 0, width: '100%', height: '100%', border: 'none' }}
+              />
+            </div>
+            <button className="mini-player__close" onClick={() => setMiniVideoUrl(null)} aria-label="Close video">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
+              </svg>
+            </button>
+          </div>
+        );
+      })()}
+    </div>
   );
 }
 

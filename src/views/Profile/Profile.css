@@ -214,3 +214,49 @@
   font-size: 11px;
   padding: 5px 12px;
 }
+
+/* ── Theme list ── */
+.theme-list {
+  border: 1px solid var(--line);
+  border-radius: 4px;
+  background: var(--surface);
+  overflow: hidden;
+}
+
+.theme-list-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding: 14px 18px;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid var(--line);
+  cursor: pointer;
+  color: var(--fg);
+  transition: background 120ms ease;
+  text-align: left;
+}
+.theme-list-row:last-child { border-bottom: none; }
+.theme-list-row:hover { background: var(--surface-2); }
+.theme-list-row--active { background: var(--accent-tint); }
+
+.theme-list-row__name {
+  font-size: 14px;
+  font-weight: 600;
+}
+.theme-list-row--active .theme-list-row__name { color: var(--accent); }
+
+.theme-list-row__palette {
+  display: flex;
+  gap: 4px;
+  align-items: center;
+}
+
+.theme-pal-dot {
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  border: 1px solid rgba(128,128,128,0.25);
+  flex-shrink: 0;
+}

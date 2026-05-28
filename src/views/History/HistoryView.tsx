@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { LogoMark } from '../../components/Logo/Logo';
+import { Topbar } from '../../components/Topbar/Topbar';
 import { useSessions, type SessionFilter } from '../../hooks/useSessions';
 import { formatDisplayDate, formatDuration } from '../../lib/date';
 import './History.css';
@@ -16,22 +16,17 @@ export function HistoryView() {
 
   return (
     <div className="history-view">
-      <div className="history-header">
-        <div className="topbar" style={{ padding: 0, border: 0 }}>
-          <LogoMark size={18} />
-          <span className="crumb">History</span>
-        </div>
-        <div className="history-filters">
-          {FILTER_OPTIONS.map(opt => (
-            <button
-              key={opt.value}
-              className={`filter-chip ${filter === opt.value ? 'filter-chip--active' : ''}`}
-              onClick={() => setFilter(opt.value as SessionFilter)}
-            >
-              {opt.label}
-            </button>
-          ))}
-        </div>
+      <Topbar title="History" />
+      <div className="history-subbar">
+        {FILTER_OPTIONS.map(opt => (
+          <button
+            key={opt.value}
+            className={`filter-chip ${filter === opt.value ? 'filter-chip--active' : ''}`}
+            onClick={() => setFilter(opt.value as SessionFilter)}
+          >
+            {opt.label}
+          </button>
+        ))}
       </div>
 
       <div className="history-list">

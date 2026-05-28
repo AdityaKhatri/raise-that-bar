@@ -5,19 +5,12 @@
   overflow: hidden;
 }
 
-.history-header {
-  padding: 12px 20px 14px;
-  padding-top: calc(12px + env(safe-area-inset-top, 0px));
-  flex-shrink: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  border-bottom: 1px solid var(--line);
-}
-
-.history-filters {
+.history-subbar {
   display: flex;
   gap: 6px;
+  padding: 10px 20px;
+  border-bottom: 1px solid var(--line);
+  flex-shrink: 0;
 }
 
 .history-list {
