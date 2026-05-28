@@ -236,6 +236,9 @@
 
 html {
   background: var(--bg);
+  /* Prevent the whole document from bouncing/overscrolling in PWA */
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 body {
@@ -245,6 +248,8 @@ body {
   background: var(--bg);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
+  overflow: hidden;
+  overscroll-behavior: none;
 }
 
 #root {

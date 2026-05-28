@@ -1,11 +1,12 @@
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { getAllExercises } from '../../db/exercises';
 import { putWorkout } from '../../db/workouts';
 import {
-  SINGLE_PROMPT, buildPlanPrompt,
+  buildSinglePrompt, buildPlanPrompt,
   parseAIResponse, resolveAIWorkouts, buildWorkoutsFromAI,
 } from '../../lib/aiImport';
-import type { AIResolveResult } from '../../lib/aiImport';
+import type { AIResolveResult, } from '../../lib/aiImport';
+import type { Exercise } from '../../types';
 import './AIImportSheet.css';
 
 interface Props {
@@ -28,8 +29,17 @@ export function AIImportSheet({ onDone, onCancel }: Props) {
   const [previews, setPreviews] = useState<AIResolveResult[]>([]);
   const [expandedIdx, setExpandedIdx] = useState<number | null>(0);
   const [importing, setImporting] = useState(false);
+  const [exercises, setExercises] = useState<Exercise[]>([]);
 
-  const prompt = mode === 'single' ? SINGLE_PROMPT : buildPlanPrompt(days);
+  useEffect(() => {
+    getAllExercises().then(setExercises);
+  }, []);
+
+  const prompt = exercises.length === 0
+    ? 'Loading exercise library…'
+    : mode === 'single'
+      ? buildSinglePrompt(exercises)
+      : buildPlanPrompt(days, exercises);
 
   const stepLabels: { key: Step; label: string }[] = [
     { key: 'setup', label: '1 Setup' },
@@ -44,12 +54,11 @@ export function AIImportSheet({ onDone, onCancel }: Props) {
     setTimeout(() => setCopied(false), 2000);
   }
 
-  async function handleParse() {
+  function handleParse() {
     setParseError(null);
     try {
       const parsed = parseAIResponse(pasted);
-      const library = await getAllExercises();
-      const results = resolveAIWorkouts(parsed, library);
+      const results = resolveAIWorkouts(parsed, exercises);
       setPreviews(results);
       setExpandedIdx(0);
       setStep('preview');
@@ -163,7 +172,7 @@ export function AIImportSheet({ onDone, onCancel }: Props) {
             </div>
             <div className="ai-sheet__actions">
               <button className="btn" onClick={() => setStep('setup')}>← Back</button>
-              <button className="btn primary" onClick={copyPrompt}>
+              <button className="btn primary" onClick={copyPrompt} disabled={exercises.length === 0}>
                 {copied ? '✓ Copied!' : 'Copy Prompt'}
               </button>
               <button className="btn" style={{ marginLeft: 'auto' }} onClick={() => setStep('paste')}>Next →</button>

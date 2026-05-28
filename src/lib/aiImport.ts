@@ -1,30 +1,65 @@
 import { uid } from './ids';
 import type { Workout, Exercise, GroupType } from '../types';
 
-// Publicly served JSON — AI agents can fetch this directly
-const EXERCISES_JSON_URL = 'https://adityakhatri.github.io/iron-log/exercises.json';
+// ─── Library section ──────────────────────────────────────────────────────────
 
-// ─── Shared prompt sections ───────────────────────────────────────────────────
+/**
+ * Build a compact exercise library listing to embed directly in the prompt.
+ * Format per line: name|muscleGroup|equipment|category
+ * The AI uses the exact name when referencing exercises.
+ */
+function buildLibrarySection(exercises: Exercise[]): string {
+  const lines = exercises
+    .filter(e => !e.archived)
+    .map(e => `${e.name}|${e.muscleGroup}|${e.equipment}|${e.category}`)
+    .join('\n');
 
-const LIBRARY_SECTION = `## Exercise Library
-Fetch this URL to get all available exercises as JSON — use exercise names **exactly** as they appear in the "name" field:
-${EXERCISES_JSON_URL}
+  return `## Exercise Library
+Columns: name | muscle group | equipment | category
+You MUST use exercise names exactly as written below (copy-paste, no paraphrasing):
 
-Each entry has: name, muscleGroup, secondaryMuscles, equipment, category, defaultUnit.`;
+${lines}`;
+}
 
-const FORMAT_RULES = `**Group types:** warmup · mobility · activation · main · accessory · cardio · cooldown
-**reps:** string like "10", "8-12", "AMRAP", or null for timed exercises
-**rest:** seconds between sets
-**For timed exercises** (holds, stretches, cardio): omit reps and use "time": 30 (seconds)`;
+// ─── Shared strict rules ──────────────────────────────────────────────────────
+
+const STRICT_RULES = `## Strict rules — follow exactly or the import will break
+
+### Exercise names
+- Every "name" field in your JSON MUST be copied character-for-character from the library above.
+- Do NOT paraphrase, abbreviate, translate, or add/remove words (e.g. "Bench Press" ≠ "Dumbbell Bench Press").
+- If you want an exercise that isn't in the library, pick the closest one that IS listed.
+- Never invent an exercise name that doesn't appear in the library.
+
+### Field types
+- "sets": integer (e.g. 3)
+- "reps": always a quoted string ("10", "8-12", "AMRAP") — NEVER a bare number — or omit entirely for timed exercises
+- "time": integer seconds (e.g. 30) — only for timed exercises; omit for rep-based ones
+- "rest": integer seconds (e.g. 90), or omit if not applicable
+- "notes": string, use "" if empty — do not omit the field
+
+### Group type — must be exactly one of:
+warmup | mobility | activation | main | accessory | cardio | cooldown
+
+### JSON validity
+- Output valid JSON only — no trailing commas, no comments, no ellipsis, no placeholder text.
+- No text before the opening \`\`\`json fence or after the closing \`\`\` fence.
+
+### Pre-output checklist
+Before writing the JSON, verify every exercise name against the library list above.
+If any name doesn't match exactly, replace it with one that does.`;
 
 // ─── Single workout prompt ────────────────────────────────────────────────────
 
-export const SINGLE_PROMPT = `You are a workout planning assistant for IronLog, a workout tracking app.
+export function buildSinglePrompt(exercises: Exercise[]): string {
+  return `You are a workout planning assistant for IronLog, a workout tracking app.
 
-${LIBRARY_SECTION}
+${buildLibrarySection(exercises)}
 
-## Output Format
-When the user approves the workout, output ONLY a JSON code block in this format:
+${STRICT_RULES}
+
+## Output format
+When the user approves the workout, output ONLY the following JSON block — no text before or after it:
 
 \`\`\`json
 {
@@ -48,23 +83,25 @@ When the user approves the workout, output ONLY a JSON code block in this format
 }
 \`\`\`
 
-${FORMAT_RULES}
-
-## Your job
-1. Ask the user about their goals, available equipment, experience level, and which muscles to target
-2. Propose a workout using exercises from the library
+## Conversation flow
+1. Ask the user about their goals, available equipment, experience level, and target muscles
+2. Propose a workout using only exercises from the library
 3. Refine based on feedback
-4. When the user is happy, output the final JSON block — nothing else after it`.trim();
+4. When the user confirms, run the pre-output checklist, then output the JSON block and nothing else`.trim();
+}
 
 // ─── Week plan prompt ─────────────────────────────────────────────────────────
 
-export function buildPlanPrompt(days: number): string {
+export function buildPlanPrompt(days: number, exercises: Exercise[]): string {
   return `You are a workout planning assistant for IronLog, a workout tracking app. The user wants a ${days}-day weekly workout plan.
 
-${LIBRARY_SECTION}
+${buildLibrarySection(exercises)}
 
-## Output Format
-When the user approves the plan, output ONLY a single JSON code block containing all ${days} workouts:
+${STRICT_RULES}
+
+## Output format
+When the user approves the plan, output ONLY the following JSON block — no text before or after it.
+The "workouts" array must contain exactly ${days} items:
 
 \`\`\`json
 {
@@ -92,16 +129,14 @@ When the user approves the plan, output ONLY a single JSON code block containing
 }
 \`\`\`
 
-The "workouts" array must contain exactly ${days} workouts. Name each one clearly (e.g. "Push", "Pull", "Legs", "Upper", "Lower", "Full Body").
+Name each workout clearly (e.g. "Push", "Pull", "Legs", "Upper", "Lower", "Full Body").
 
-${FORMAT_RULES}
-
-## Your job
-1. Ask the user about their goals, available equipment, experience level, and training style (e.g. Push/Pull/Legs, Upper/Lower, Full Body)
-2. Design a balanced ${days}-day split using exercises from the library
+## Conversation flow
+1. Ask the user about their goals, available equipment, experience level, and training style (Push/Pull/Legs, Upper/Lower, Full Body, etc.)
+2. Design a balanced ${days}-day split using only exercises from the library
 3. Ensure adequate muscle group recovery between sessions
 4. Refine based on feedback
-5. When the user is happy, output the final JSON block containing all ${days} workouts — nothing else after it`.trim();
+5. When the user confirms, run the pre-output checklist, then output the JSON block and nothing else`.trim();
 }
 
 // ─── Parser ───────────────────────────────────────────────────────────────────
