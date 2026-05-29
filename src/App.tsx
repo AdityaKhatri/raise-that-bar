@@ -103,14 +103,38 @@ export function App() {
     getOnboardingDone().then(done => setOnboardingDoneState(done));
   }, []);
 
-  // Detect #import= fragment and prepare the confirmation sheet
+  // Detect #import= fragment and prepare the confirmation sheet.
+  // On iOS, shared links always open in Safari rather than the installed PWA.
+  // To bridge this: when the link opens in browser mode, persist the payload in
+  // localStorage so the PWA picks it up on next launch from the home screen.
   useEffect(() => {
+    const PENDING_KEY = 'iron_log_pending_import';
+    const isStandalone =
+      window.matchMedia('(display-mode: standalone)').matches ||
+      !!(window.navigator as { standalone?: boolean }).standalone;
+
     const encoded = extractImportFragment();
-    if (!encoded) return;
-    clearImportFragment();
-    decodeWorkoutPayload(encoded)
-      .then(payload => previewImport(payload).then(preview => setImportState({ payload, preview })))
-      .catch(() => {/* invalid link — silently ignore */});
+
+    if (encoded) {
+      clearImportFragment();
+      // Save to localStorage so the PWA can pick it up even if this is the browser
+      localStorage.setItem(PENDING_KEY, encoded);
+      decodeWorkoutPayload(encoded)
+        .then(payload => previewImport(payload).then(preview => setImportState({ payload, preview })))
+        .catch(() => {/* invalid link — silently ignore */});
+      return;
+    }
+
+    // Running as installed PWA — check for a payload saved from a browser session
+    if (isStandalone) {
+      const pending = localStorage.getItem(PENDING_KEY);
+      if (pending) {
+        localStorage.removeItem(PENDING_KEY);
+        decodeWorkoutPayload(pending)
+          .then(payload => previewImport(payload).then(preview => setImportState({ payload, preview })))
+          .catch(() => {});
+      }
+    }
   }, []);
 
   // Auto-sync library from GitHub on every app launch.

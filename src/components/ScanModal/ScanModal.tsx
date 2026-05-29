@@ -8,82 +8,71 @@ interface Props {
   onClose: () => void;
 }
 
-type ScanStatus = 'requesting' | 'scanning' | 'error';
+type Status = 'requesting' | 'live' | 'scanning' | 'error';
 
 export function ScanModal({ onDetected, onClose }: Props) {
   const videoRef = useRef<HTMLVideoElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const rafRef = useRef<number>(0);
   const streamRef = useRef<MediaStream | null>(null);
-  const [status, setStatus] = useState<ScanStatus>('requesting');
+  const [status, setStatus] = useState<Status>('requesting');
   const [errorMsg, setErrorMsg] = useState('');
-  const detectedRef = useRef(false);
+  const [notFound, setNotFound] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
 
-    async function start() {
-      try {
-        const stream = await navigator.mediaDevices.getUserMedia({
-          video: { facingMode: 'environment' },
-        });
+    navigator.mediaDevices
+      .getUserMedia({ video: { facingMode: 'environment' } })
+      .then(stream => {
         if (cancelled) { stream.getTracks().forEach(t => t.stop()); return; }
         streamRef.current = stream;
         if (videoRef.current) {
           videoRef.current.srcObject = stream;
-          await videoRef.current.play();
+          videoRef.current.play();
         }
-        setStatus('scanning');
-        tick();
-      } catch (e) {
+        setStatus('live');
+      })
+      .catch(e => {
         if (!cancelled) {
           setErrorMsg(e instanceof Error ? e.message : 'Camera access denied');
           setStatus('error');
         }
-      }
-    }
-
-    function tick() {
-      const video = videoRef.current;
-      const canvas = canvasRef.current;
-      if (!video || !canvas || video.readyState < 2 || video.videoWidth === 0) {
-        rafRef.current = requestAnimationFrame(tick);
-        return;
-      }
-
-      canvas.width = video.videoWidth;
-      canvas.height = video.videoHeight;
-      const ctx = canvas.getContext('2d')!;
-      ctx.drawImage(video, 0, 0);
-      const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
-      const result = jsQR(imageData.data, canvas.width, canvas.height, {
-        inversionAttempts: 'attemptBoth',
       });
 
-      if (result?.data && !detectedRef.current) {
-        detectedRef.current = true;
-        cleanup();
-        onDetected(result.data);
-        return;
-      }
-
-      rafRef.current = requestAnimationFrame(tick);
-    }
-
-    function cleanup() {
-      cancelAnimationFrame(rafRef.current);
-      streamRef.current?.getTracks().forEach(t => t.stop());
-      streamRef.current = null;
-    }
-
-    start();
     return () => {
       cancelled = true;
-      cancelAnimationFrame(rafRef.current);
       streamRef.current?.getTracks().forEach(t => t.stop());
       streamRef.current = null;
     };
-  }, [onDetected]);
+  }, []);
+
+  function captureAndScan() {
+    const video = videoRef.current;
+    const canvas = canvasRef.current;
+    if (!video || !canvas || video.readyState < 2 || video.videoWidth === 0) return;
+
+    setStatus('scanning');
+    setNotFound(false);
+
+    canvas.width = video.videoWidth;
+    canvas.height = video.videoHeight;
+    const ctx = canvas.getContext('2d')!;
+    ctx.drawImage(video, 0, 0);
+    const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+    const result = jsQR(imageData.data, canvas.width, canvas.height, {
+      inversionAttempts: 'attemptBoth',
+    });
+
+    if (result?.data) {
+      streamRef.current?.getTracks().forEach(t => t.stop());
+      onDetected(result.data);
+    } else {
+      setNotFound(true);
+      setStatus('live');
+    }
+  }
+
+  const showViewfinder = status === 'live' || status === 'scanning';
 
   return (
     <Modal open onClose={onClose} title="Scan QR Code" size="md">
@@ -106,24 +95,29 @@ export function ScanModal({ onDetected, onClose }: Props) {
           </div>
         )}
 
-        <div className="scan-modal__viewfinder" style={{ display: status === 'scanning' ? 'block' : 'none' }}>
-          <video
-            ref={videoRef}
-            className="scan-video"
-            playsInline
-            muted
-            autoPlay
-          />
+        <div className="scan-modal__viewfinder" style={{ display: showViewfinder ? 'block' : 'none' }}>
+          <video ref={videoRef} className="scan-video" playsInline muted autoPlay />
           <div className="scan-overlay">
             <div className="scan-frame">
               <div className="scan-frame-inner" />
             </div>
           </div>
-          <p className="scan-hint">Point at an IronLog QR code</p>
+          <p className={`scan-hint${notFound ? ' scan-hint--error' : ''}`}>
+            {notFound ? 'No QR code found — try again' : 'Position the QR code in the frame'}
+          </p>
         </div>
 
-        {/* Hidden canvas used for frame decoding */}
         <canvas ref={canvasRef} style={{ display: 'none' }} />
+
+        {showViewfinder && (
+          <button
+            className="btn primary btn-full"
+            onClick={captureAndScan}
+            disabled={status === 'scanning'}
+          >
+            {status === 'scanning' ? 'Scanning…' : 'Scan'}
+          </button>
+        )}
       </div>
     </Modal>
   );

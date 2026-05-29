@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { LogoFull } from '../../components/Logo/Logo';
 import { useSyncContext } from '../../context/SyncContext';
 import { getProfile, setProfile } from '../../db/meta';
@@ -20,6 +20,132 @@ export function OnboardingView({ onDone }: OnboardingViewProps) {
       {step === 'profile' && <ProfileStep onDone={onDone} />}
     </div>
   );
+}
+
+// ─── Platform detection ───────────────────────────────────────────────────────
+
+type Platform = 'ios' | 'android' | 'other';
+
+function getPlatform(): Platform {
+  const ua = navigator.userAgent;
+  if (/iPad|iPhone|iPod/.test(ua)) return 'ios';
+  if (/Android/.test(ua)) return 'android';
+  return 'other';
+}
+
+function isStandalone(): boolean {
+  return (
+    window.matchMedia('(display-mode: standalone)').matches ||
+    !!(window.navigator as { standalone?: boolean }).standalone
+  );
+}
+
+// ─── Install banner ───────────────────────────────────────────────────────────
+
+interface BeforeInstallPromptEvent extends Event {
+  prompt(): Promise<void>;
+  readonly userChoice: Promise<{ outcome: 'accepted' | 'dismissed' }>;
+}
+
+function InstallBanner() {
+  const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
+  const [installed, setInstalled] = useState(false);
+  const platform = useRef(getPlatform()).current;
+
+  useEffect(() => {
+    if (isStandalone()) { setInstalled(true); return; }
+
+    const handler = (e: Event) => {
+      e.preventDefault();
+      setDeferredPrompt(e as BeforeInstallPromptEvent);
+    };
+    window.addEventListener('beforeinstallprompt', handler);
+
+    const installedHandler = () => setInstalled(true);
+    window.addEventListener('appinstalled', installedHandler);
+
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('appinstalled', installedHandler);
+    };
+  }, []);
+
+  // Already running as PWA or just installed
+  if (installed) return null;
+
+  async function handleInstall() {
+    if (!deferredPrompt) return;
+    await deferredPrompt.prompt();
+    const { outcome } = await deferredPrompt.userChoice;
+    if (outcome === 'accepted') setInstalled(true);
+    setDeferredPrompt(null);
+  }
+
+  if (platform === 'ios') {
+    return (
+      <div className="ob-install">
+        <div className="ob-install__label">Install IronLog</div>
+        <ol className="ob-install__steps">
+          <li>
+            <span className="ob-install__step-icon">
+              {/* iOS share icon */}
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <path d="M8 12H3v9h18v-9h-5" />
+                <polyline points="12 3 12 15" />
+                <polyline points="8 7 12 3 16 7" />
+              </svg>
+            </span>
+            Tap the <strong>Share</strong> button in Safari
+          </li>
+          <li>
+            <span className="ob-install__step-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <rect x="3" y="3" width="18" height="18" rx="2" />
+                <line x1="12" y1="8" x2="12" y2="16" />
+                <line x1="8" y1="12" x2="16" y2="12" />
+              </svg>
+            </span>
+            Tap <strong>Add to Home Screen</strong>
+          </li>
+          <li>
+            <span className="ob-install__step-icon">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                <polyline points="20 6 9 17 4 12" />
+              </svg>
+            </span>
+            Tap <strong>Add</strong> to confirm
+          </li>
+        </ol>
+      </div>
+    );
+  }
+
+  if (platform === 'android' && deferredPrompt) {
+    return (
+      <div className="ob-install">
+        <div className="ob-install__label">Install IronLog</div>
+        <button className="btn outline btn-full" onClick={handleInstall}>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+            <path d="M12 2a4 4 0 0 0-4 4v6H5l7 7 7-7h-3V6a4 4 0 0 0-4-4z" />
+          </svg>
+          Add to Home Screen
+        </button>
+      </div>
+    );
+  }
+
+  if (platform === 'android') {
+    return (
+      <div className="ob-install">
+        <div className="ob-install__label">Install IronLog</div>
+        <p className="ob-install__note">
+          Tap the browser menu <strong>⋮</strong> and select <strong>Add to Home Screen</strong>
+        </p>
+      </div>
+    );
+  }
+
+  return null;
 }
 
 // ─── Step 1: Sync choice ──────────────────────────────────────────────────────
@@ -104,6 +230,8 @@ function SyncStep({ onStartFresh, onDone }: { onStartFresh: () => void; onDone: 
           <button className="btn ghost btn-sm" onClick={clearError}>Dismiss</button>
         </div>
       )}
+
+      <InstallBanner />
     </div>
   );
 }

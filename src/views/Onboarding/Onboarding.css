@@ -245,3 +245,65 @@
   background: var(--surface-2);
   color: var(--fg);
 }
+
+/* ─── Install banner ─────────────────────────────────────────────────────── */
+.ob-install {
+  width: 100%;
+  background: var(--surface);
+  border: 1px solid var(--line);
+  border-radius: 12px;
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.ob-install__label {
+  font-family: var(--mono);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+}
+
+.ob-install__steps {
+  margin: 0;
+  padding: 0 0 0 4px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  counter-reset: install-step;
+}
+
+.ob-install__steps li {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-family: var(--body);
+  font-size: 13px;
+  color: var(--fg-dim);
+  line-height: 1.4;
+  counter-increment: install-step;
+}
+
+.ob-install__step-icon {
+  flex-shrink: 0;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface-2);
+  border-radius: 6px;
+  color: var(--accent);
+}
+
+.ob-install__note {
+  margin: 0;
+  font-family: var(--body);
+  font-size: 13px;
+  color: var(--fg-dim);
+  line-height: 1.5;
+}
