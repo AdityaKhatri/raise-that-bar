@@ -46,68 +46,126 @@
 /* ─── Week ring ──────────────────────────────────────────────────────────────── */
 .week-ring {
   display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: 14px 20px 10px;
+  flex-direction: column;
+  gap: 12px;
+  padding: 14px 20px 16px;
   border-bottom: 1px solid var(--line);
 }
 
-.week-day {
+.week-ring__header {
   display: flex;
-  flex-direction: column;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.week-ring__title {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+}
+
+.week-streak {
+  display: flex;
   align-items: center;
   gap: 5px;
 }
 
-.week-day__circle {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
+.week-streak__count {
+  font-family: var(--mono);
+  font-size: 17px;
+  font-weight: 700;
+  letter-spacing: -0.02em;
+  color: var(--accent);
+}
+
+/* Days row with connectors */
+.week-ring__days {
+  display: flex;
+  align-items: flex-start;
+}
+
+.week-day {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+}
+
+/* Connector bar between squares */
+.week-conn {
+  flex-shrink: 0;
+  width: 6px;
+  height: 3px;
+  background: var(--line);
+  border-radius: 2px;
+  margin-top: 19px; /* (42px square ÷ 2) − (3px ÷ 2) */
+}
+
+.week-conn--on {
+  background: var(--accent);
+}
+
+/* Square tiles */
+.week-sq {
+  width: 100%;
+  max-width: 42px;
+  aspect-ratio: 1;
+  border-radius: 10px;
   border: 1.5px solid var(--line-2);
+  background: var(--surface);
   display: flex;
   align-items: center;
   justify-content: center;
-  font-family: var(--mono);
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.04em;
   color: var(--fg-mute);
-  transition: background 150ms ease, border-color 150ms ease, color 150ms ease;
+  transition: background 150ms ease, border-color 150ms ease, box-shadow 150ms ease;
 }
 
-.week-day__circle--done {
+/* Completed workout */
+.week-sq--done {
   background: var(--accent);
   border-color: var(--accent);
   color: #0a0a0c;
+  box-shadow: 0 0 16px rgba(255, 90, 31, 0.4);
 }
 
-.week-day__circle--today {
-  border-color: var(--fg-dim);
-  color: var(--fg);
+/* Today, no workout yet */
+.week-sq--today {
+  border: 2px solid var(--accent);
+  background: var(--bg);
+  color: var(--accent);
 }
 
-.week-day__circle--done.week-day__circle--today {
-  border-color: var(--accent);
+/* Future day */
+.week-sq--future {
+  border: 1.5px dashed color-mix(in srgb, var(--line-2) 60%, transparent);
+  background: transparent;
 }
 
-.week-day__circle--future {
-  opacity: 0.3;
-}
-
-/* Strava-like streak fire ring */
-.week-day__circle--streak {
-  box-shadow: 0 0 0 2px #f59e0b, 0 0 8px rgba(245, 158, 11, 0.35);
-}
-
-.week-day__dot {
-  width: 4px;
-  height: 4px;
+/* Center dot for past non-workout days */
+.week-sq__dot {
+  width: 5px;
+  height: 5px;
   border-radius: 50%;
-  background: var(--accent);
+  background: var(--line-2);
 }
 
-.week-day__dot--hidden {
-  opacity: 0;
+/* Day letters */
+.week-day__lbl {
+  font-family: var(--mono);
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--fg-mute);
+}
+
+.week-day__lbl--today {
+  color: var(--accent);
 }
 
 /* ─── Date nav ───────────────────────────────────────────────────────────────── */

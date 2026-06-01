@@ -348,10 +348,9 @@ const DAY_LETTER: Record<number, string> = { 0: 'S', 1: 'M', 2: 'T', 3: 'W', 4: 
 
 function WeekRing({ sessionDates }: { sessionDates: Set<string> }) {
   const today = new Date(TODAY + 'T00:00:00');
-  // Week starts Saturday: getDay() 6=Sat,0=Sun,1=Mon,...,5=Fri
   const daysSinceSat = today.getDay() === 6 ? 0 : today.getDay() + 1;
 
-  // Active streak: consecutive workout days going backwards from today (or yesterday if no workout today)
+  // Active streak — consecutive workout days backwards from today (or yesterday)
   const streakDates = new Set<string>();
   const streakCur = new Date(today);
   if (!sessionDates.has(TODAY)) streakCur.setDate(streakCur.getDate() - 1);
@@ -360,6 +359,7 @@ function WeekRing({ sessionDates }: { sessionDates: Set<string> }) {
     if (sessionDates.has(iso)) { streakDates.add(iso); streakCur.setDate(streakCur.getDate() - 1); }
     else break;
   }
+  const streakCount = streakDates.size;
 
   const days = Array.from({ length: 7 }, (_, i) => {
     const d = new Date(today);
@@ -377,21 +377,44 @@ function WeekRing({ sessionDates }: { sessionDates: Set<string> }) {
 
   return (
     <div className="week-ring">
-      {days.map(day => (
-        <div key={day.iso} className="week-day">
-          <div className={[
-            'week-day__circle',
-            day.hasWorkout ? 'week-day__circle--done' : '',
-            day.isToday ? 'week-day__circle--today' : '',
-            day.isFuture ? 'week-day__circle--future' : '',
-            day.isStreak ? 'week-day__circle--streak' : '',
-          ].filter(Boolean).join(' ')}>
-            {day.letter}
+      <div className="week-ring__header">
+        <span className="week-ring__title">This Week</span>
+        {streakCount > 0 && (
+          <div className="week-streak">
+            <svg width="11" height="14" viewBox="0 0 11 14" fill="var(--accent)">
+              <path d="M6.5 0S2 4 2 7.5a4.5 4.5 0 009 0C11 4 6.5 0 6.5 0zM6.5 11a2.5 2.5 0 01-2.5-2.5c0-1.5 1.2-3 2.5-4.2 1.3 1.2 2.5 2.7 2.5 4.2A2.5 2.5 0 016.5 11z"/>
+            </svg>
+            <span className="week-streak__count">{streakCount}D</span>
           </div>
-          {/* Always render dot — hidden for non-today to keep column heights equal */}
-          <div className={`week-day__dot${day.isToday ? '' : ' week-day__dot--hidden'}`} />
-        </div>
-      ))}
+        )}
+      </div>
+
+      <div className="week-ring__days">
+        {days.flatMap((day, i) => {
+          const connector = i > 0
+            ? <div key={`c${i}`} className={`week-conn${days[i - 1].isStreak && day.isStreak ? ' week-conn--on' : ''}`} />
+            : null;
+
+          const sq = (
+            <div key={day.iso} className="week-day">
+              <div className={[
+                'week-sq',
+                day.hasWorkout ? 'week-sq--done' : '',
+                day.isToday && !day.hasWorkout ? 'week-sq--today' : '',
+                day.isFuture ? 'week-sq--future' : '',
+              ].filter(Boolean).join(' ')}>
+                {day.hasWorkout
+                  ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
+                  : !day.isFuture ? <div className="week-sq__dot" /> : null
+                }
+              </div>
+              <span className={`week-day__lbl${day.isToday ? ' week-day__lbl--today' : ''}`}>{day.letter}</span>
+            </div>
+          );
+
+          return connector ? [connector, sq] : [sq];
+        })}
+      </div>
     </div>
   );
 }
