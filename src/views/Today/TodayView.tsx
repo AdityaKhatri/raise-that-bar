@@ -90,21 +90,18 @@ export function TodayView() {
   const { session, paused, startSession, resumeSession, unpauseSession } = useActiveSession();
   const { day } = usePlanDay(TODAY);
   const { streak, thisWeek, allTime } = useQuickStats();
-  // Finished sessions logged today, keyed by workoutId
+  // All finished sessions logged today, keyed by session id
   const [doneSessions, setDoneSessions] = useState<Map<string, Session>>(new Map());
   const [viewingWorkout, setViewingWorkout] = useState<Workout | null>(null);
+  const [viewingSession, setViewingSession] = useState<Session | null>(null);
   const [profileName, setProfileName] = useState('');
 
-  // Load finished sessions for today to detect which planned workouts are done
+  // Load finished sessions for today (all of them, including freestyle)
   useEffect(() => {
     getSessionsByDate(TODAY).then(sessions => {
-      const map = new Map<string, Session>();
-      for (const s of sessions) {
-        if (s.finishedAt && s.workoutId) {
-          map.set(s.workoutId, s);
-        }
-      }
-      setDoneSessions(map);
+      setDoneSessions(new Map(
+        sessions.filter(s => s.finishedAt).map(s => [s.id, s])
+      ));
     });
   }, [session]); // re-run whenever active session changes (e.g. after finishing)
 
@@ -150,6 +147,16 @@ export function TodayView() {
   }
 
   if (session && !paused) return <ActiveSessionView />;
+
+  if (viewingSession) {
+    return (
+      <SessionDetailPage
+        session={viewingSession}
+        onBack={() => setViewingSession(null)}
+        onEdit={() => { setViewingSession(null); resumeSession(viewingSession); }}
+      />
+    );
+  }
 
   if (viewingWorkout) {
     return (
@@ -205,24 +212,66 @@ export function TodayView() {
         </div>
 
         {/* Planned Workouts */}
-        {day && day.workouts.length > 0 && (
-          <div className="plan-section">
-            <div className="plan-section-label">Planned</div>
-            {day.workouts.map(pw => {
-              const doneSession = doneSessions.get(pw.workoutId) ?? null;
-              return (
-                <PlannedWorkoutCard
-                  key={pw.workoutId}
-                  workoutId={pw.workoutId}
-                  note={pw.note}
-                  doneSession={doneSession}
-                  onEdit={() => resumeSession(doneSession!)}
-                  onView={w => setViewingWorkout(w)}
-                />
-              );
-            })}
-          </div>
-        )}
+        {(() => {
+          const allSessions = Array.from(doneSessions.values());
+          const plannedWorkoutIds = new Set(day?.workouts.map(pw => pw.workoutId) ?? []);
+          // Sessions not tied to any planned workout for today
+          const unplannedSessions = allSessions.filter(
+            s => !s.workoutId || !plannedWorkoutIds.has(s.workoutId)
+          );
+
+          return (
+            <>
+              {day && day.workouts.length > 0 && (
+                <div className="plan-section">
+                  <div className="plan-section-label">Planned</div>
+                  {day.workouts.map(pw => {
+                    const doneSession = allSessions.find(s => s.workoutId === pw.workoutId) ?? null;
+                    return (
+                      <PlannedWorkoutCard
+                        key={pw.workoutId}
+                        workoutId={pw.workoutId}
+                        note={pw.note}
+                        doneSession={doneSession}
+                        onEdit={() => resumeSession(doneSession!)}
+                        onView={w => setViewingWorkout(w)}
+                        onViewSession={s => setViewingSession(s)}
+                      />
+                    );
+                  })}
+                </div>
+              )}
+
+              {unplannedSessions.length > 0 && (
+                <div className="plan-section">
+                  <div className="plan-section-label">Completed Today</div>
+                  {unplannedSessions.map(s => (
+                    <button
+                      key={s.id}
+                      className="plan-card plan-card--done"
+                      style={{ width: '100%', textAlign: 'left', cursor: 'pointer' }}
+                      onClick={() => setViewingSession(s)}
+                    >
+                      <div style={{ flex: 1 }}>
+                        <div className="plan-card__name">{s.workoutName}</div>
+                        <div className="plan-card__meta">
+                          {s.groups.reduce((a, g) => a + g.blocks.length, 0)} exercises
+                          {s.durationMs ? ` · ${formatDuration(s.durationMs)}` : ''}
+                        </div>
+                      </div>
+                      <span className="plan-card__done-badge">
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3">
+                          <polyline points="20 6 9 17 4 12" />
+                        </svg>
+                        Done
+                      </span>
+                    </button>
+                  ))}
+                </div>
+              )}
+            </>
+          );
+        })()}
 
         {/* Freestyle */}
         <div className="quick-start-section">
@@ -239,12 +288,13 @@ export function TodayView() {
   );
 }
 
-function PlannedWorkoutCard({ workoutId, note, doneSession, onEdit, onView }: {
+function PlannedWorkoutCard({ workoutId, note, doneSession, onEdit, onView, onViewSession }: {
   workoutId: string;
   note: string;
   doneSession: Session | null;
   onEdit: () => void;
   onView: (w: Workout) => void;
+  onViewSession: (s: Session) => void;
 }) {
   const [workout, setWorkout] = useState<Workout | null>(null);
 
@@ -256,11 +306,16 @@ function PlannedWorkoutCard({ workoutId, note, doneSession, onEdit, onView }: {
   const name = workout?.name ?? workoutId;
   const exCount = workout ? workout.groups.reduce((a, g) => a + g.blocks.length, 0) : null;
 
+  function handleCardClick() {
+    if (isDone) onViewSession(doneSession);
+    else if (workout) onView(workout);
+  }
+
   return (
     <div
       className={`plan-card${isDone ? ' plan-card--done' : ''}`}
       style={{ cursor: 'pointer' }}
-      onClick={() => workout && onView(workout)}
+      onClick={handleCardClick}
     >
       <div style={{ flex: 1 }}>
         <div className="plan-card__name">{name}</div>
@@ -279,7 +334,7 @@ function PlannedWorkoutCard({ workoutId, note, doneSession, onEdit, onView }: {
               </svg>
               Done
             </span>
-            <button className="btn outline btn-sm" onClick={onEdit}>Edit</button>
+            <button className="btn outline btn-sm" onClick={e => { e.stopPropagation(); onEdit(); }}>Edit</button>
           </>
         ) : (
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fg-mute)" strokeWidth="2">
@@ -846,6 +901,98 @@ function SessionExercisePicker({ open, onClose, onPick }: {
         )}
       </div>
     </Modal>
+  );
+}
+
+// ─── Session Detail Page (read-only, full screen) ────────────────────────────
+
+function SessionDetailPage({ session, onBack, onEdit }: {
+  session: Session;
+  onBack: () => void;
+  onEdit: () => void;
+}) {
+  return (
+    <div className="workout-editor">
+      <Topbar
+        title={session.workoutName}
+        onBack={onBack}
+        right={
+          <button className="btn outline btn-sm" onClick={onEdit}>Edit</button>
+        }
+      />
+
+      {/* Session meta row */}
+      <div className="sess-detail-meta">
+        {session.durationMs != null && (
+          <span>{formatDuration(session.durationMs)}</span>
+        )}
+        {session.notes?.trim() && (
+          <span className="sess-detail-notes">{session.notes}</span>
+        )}
+      </div>
+
+      <div className="workout-editor__body">
+        {session.groups.map(group => {
+          const groupClass = GROUP_CLASS[group.groupType] ?? 'g-main';
+          const completedSets = group.blocks.reduce((a, b) => a + b.sets.filter(st => st.completed).length, 0);
+          const totalSets = group.blocks.reduce((a, b) => a + b.sets.length, 0);
+
+          return (
+            <div key={group.id} className={`group ${groupClass} group-editor`}>
+              <div className="group-head group-editor__header">
+                <span className="gname">{group.name}</span>
+                <span className="gmeta" style={{ marginLeft: 'auto' }}>{completedSets}/{totalSets} sets</span>
+              </div>
+
+              {group.blocks.map(block => {
+                const completedCount = block.skipped ? 0 : block.sets.filter(st => st.completed).length;
+                const totalCount = block.sets.length;
+                const allDone = completedCount === totalCount;
+                const noneDone = completedCount === 0;
+
+                return (
+                  <div key={block.id} className="sess-detail-block">
+                    <div className="sess-detail-block__header">
+                      <span className="sess-detail-name">{block.exerciseName}</span>
+                      <span className={`sess-set-fraction${allDone ? ' sess-set-fraction--all' : noneDone ? ' sess-set-fraction--none' : ''}`}>
+                        {completedCount}/{totalCount}
+                      </span>
+                    </div>
+
+                    {!block.skipped && (
+                      <div className="sess-detail-sets">
+                        {block.sets.map((set, i) => (
+                          <div key={i} className={`sess-detail-set${set.completed ? ' sess-detail-set--done' : ' sess-detail-set--skip'}`}>
+                            <span className="sess-detail-set__num">{i + 1}</span>
+                            {set.completed ? (
+                              <span className="sess-detail-set__vals">
+                                {set.weight != null && <>{set.weight}kg</>}
+                                {set.weight != null && (set.reps != null || set.time != null) && <> × </>}
+                                {set.reps != null && <>{set.reps} reps</>}
+                                {set.time != null && <>{set.time}s</>}
+                                {set.weight == null && set.reps == null && set.time == null && '—'}
+                              </span>
+                            ) : (
+                              <span className="sess-detail-set__vals sess-detail-set__vals--skip">skipped</span>
+                            )}
+                          </div>
+                        ))}
+                      </div>
+                    )}
+
+                    {block.skipped && (
+                      <div className="sess-detail-skipped">
+                        {block.skipReason ? `Skipped — ${block.skipReason}` : 'Skipped'}
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          );
+        })}
+      </div>
+    </div>
   );
 }
 
