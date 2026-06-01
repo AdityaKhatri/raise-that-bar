@@ -50,9 +50,19 @@ export function PlanView() {
   }
 
   function goToToday() {
+    const wasAlreadyCurrentMonth = year === now.getFullYear() && month === now.getMonth();
     setYear(now.getFullYear());
     setMonth(now.getMonth());
     setSelectedDate(TODAY_STR);
+    if (tab === 'schedule') {
+      const doScroll = () => {
+        const el = listRef.current?.querySelector('[data-today="true"]') as HTMLElement | null;
+        el?.scrollIntoView({ block: 'start', behavior: 'smooth' });
+      };
+      // If already on current month the DOM is ready; otherwise wait for re-render
+      if (wasAlreadyCurrentMonth) doScroll();
+      else setTimeout(doScroll, 60);
+    }
   }
 
   async function addWorkoutToDay(workout: Workout) {
@@ -94,9 +104,12 @@ export function PlanView() {
     sessionsByDate.get(s.date)!.push(s);
   }
 
-  const listDates = Array.from(
-    new Set([...days.keys(), ...sessionsByDate.keys()])
-  ).sort();
+  // All days in the currently viewed month (shared with calendar)
+  const listDates = Array.from({ length: daysInMonth }, (_, i) => {
+    const m = String(month + 1).padStart(2, '0');
+    const d = String(i + 1).padStart(2, '0');
+    return `${year}-${m}-${d}`;
+  });
 
   function doneWorkoutIdsForDate(date: string): Set<string> {
     const sessions = sessionsByDate.get(date) ?? [];
@@ -151,8 +164,8 @@ export function PlanView() {
         }
       />
 
-      {/* Month navigation sub-bar — calendar only */}
-      {tab === 'calendar' && <div className="plan-monthbar">
+      {/* Month navigation sub-bar — both tabs */}
+      <div className="plan-monthbar">
         <button className="icon-btn" onClick={prevMonth} aria-label="Previous month">
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <polyline points="15 18 9 12 15 6" />
@@ -165,12 +178,12 @@ export function PlanView() {
           </svg>
         </button>
         <button className="plan-today-btn" onClick={goToToday}>Today</button>
-      </div>}
+      </div>
 
       {/* ── Calendar tab ── */}
       {tab === 'calendar' && (
         <div className="plan-cal-tab">
-          {/* Weekday labels */}
+          {/* Weekday labels — sticky so they stay visible while scrolling */}
           <div className="plan-weekdays">
             {['Su', 'Mo', 'Tu', 'We', 'Th', 'Fr', 'Sa'].map(d => (
               <div key={d} className="plan-weekday">{d}</div>
@@ -215,8 +228,8 @@ export function PlanView() {
             </div>
           </div>
 
-          {/* Day panel — scrollable below calendar */}
-          <div className="plan-cal-day-scroll" ref={listRef}>
+          {/* Day panel — below calendar, parent tab scrolls */}
+          <div className="plan-cal-day-panel">
             {selectedDate ? (
               <div className="plan-day-panel">
                 <div className="plan-day-panel__header">
@@ -295,29 +308,36 @@ export function PlanView() {
       {/* ── Schedule tab ── */}
       {tab === 'schedule' && (
         <div className="plan-list" ref={listRef}>
-          {listDates.length === 0 ? (
-            <div className="empty-state" style={{ padding: '48px 0' }}>
-              <h3>Nothing planned yet</h3>
-              <p>Switch to Calendar and tap a date to schedule workouts.</p>
-            </div>
-          ) : (
-            listDates.map(dateStr => {
-              const planDay = days.get(dateStr);
-              const daySessions = sessionsByDate.get(dateStr) ?? [];
-              const doneIds = doneWorkoutIdsForDate(dateStr);
-              const isToday = dateStr === TODAY_STR;
-              const isPast = dateStr < TODAY_STR;
-              return (
-                <div
-                  key={dateStr}
-                  className={`plan-list-day${isToday ? ' plan-list-day--today' : ''}${isPast ? ' plan-list-day--past' : ''}`}
-                  data-today={isToday ? 'true' : undefined}
-                  data-date={dateStr}
-                >
-                  <div className="plan-list-day__header">
-                    <span className="plan-list-day__date">{formatDisplayDate(dateStr)}</span>
-                    {isToday && <span className="plan-list-today-chip">Today</span>}
-                  </div>
+          {listDates.map(dateStr => {
+            const planDay = days.get(dateStr);
+            const daySessions = sessionsByDate.get(dateStr) ?? [];
+            const doneIds = doneWorkoutIdsForDate(dateStr);
+            const isToday = dateStr === TODAY_STR;
+            const isPast = dateStr < TODAY_STR;
+            const hasEntries = (planDay && planDay.workouts.length > 0) ||
+              daySessions.some(s => s.finishedAt);
+
+            return (
+              <div
+                key={dateStr}
+                className={`plan-list-day${isToday ? ' plan-list-day--today' : ''}${isPast ? ' plan-list-day--past' : ''}${!hasEntries ? ' plan-list-day--empty' : ''}`}
+                data-today={isToday ? 'true' : undefined}
+                data-date={dateStr}
+              >
+                <div className="plan-list-day__header">
+                  <span className="plan-list-day__date">{formatDisplayDate(dateStr)}</span>
+                  {isToday && <span className="plan-list-today-chip">Today</span>}
+                  <button
+                    className="plan-list-add-btn"
+                    onClick={() => { setSelectedDate(dateStr); setPickerOpen(true); }}
+                    aria-label="Add workout"
+                  >
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                  </button>
+                </div>
+                {hasEntries && (
                   <div className="plan-list-day__entries">
                     {planDay && planDay.workouts.map(pw => {
                       const workout = workoutMap.get(pw.workoutId);
@@ -360,10 +380,10 @@ export function PlanView() {
                         </div>
                       ))}
                   </div>
-                </div>
-              );
-            })
-          )}
+                )}
+              </div>
+            );
+          })}
         </div>
       )}
 

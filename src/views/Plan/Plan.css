@@ -44,18 +44,22 @@
 .plan-today-btn:hover { background: rgba(255,90,31,0.15); }
 
 /* ── Calendar tab ────────────────────────────────────────────────────────────── */
+/* Entire tab scrolls as one unit — calendar + day panel flow together */
 .plan-cal-tab {
   flex: 1;
-  display: flex;
-  flex-direction: column;
-  overflow: hidden;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+  overscroll-behavior: contain;
 }
 
 .plan-weekdays {
   display: grid;
   grid-template-columns: repeat(7, 1fr);
   background: var(--bg);
-  flex-shrink: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid var(--line);
 }
 
 .plan-weekday {
@@ -65,11 +69,10 @@
   text-transform: uppercase;
   letter-spacing: 0.1em;
   color: var(--fg-mute);
-  padding: 8px 0 5px;
+  padding: 6px 0 5px;
 }
 
 .plan-cal-wrap {
-  flex-shrink: 0;
   border-bottom: 1px solid var(--line);
 }
 
@@ -81,16 +84,14 @@
   border-bottom: 0;
 }
 
-/* Fixed equal-width columns */
+/* Compact cells — height determined by content, not a fixed minimum */
 .plan-view .cal-cell {
-  min-height: 72px;
+  min-height: 52px;
 }
 
-/* Scrollable day panel below calendar */
-.plan-cal-day-scroll {
-  flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
+/* Day panel sits below calendar, no independent scroll */
+.plan-cal-day-panel {
+  border-bottom: 1px solid var(--line);
 }
 
 .plan-cal-hint {
@@ -173,6 +174,9 @@
 
 .plan-list-day--past .plan-list-day__header { opacity: 0.55; }
 .plan-list-day--today { background: rgba(255, 90, 31, 0.04); }
+/* Empty days are more compact */
+.plan-list-day--empty { padding-bottom: 12px; }
+.plan-list-day--empty .plan-list-day__header { margin-bottom: 0; }
 
 .plan-list-day__header {
   display: flex;
@@ -180,6 +184,22 @@
   gap: 8px;
   margin-bottom: 8px;
 }
+
+.plan-list-add-btn {
+  margin-left: auto;
+  width: 22px;
+  height: 22px;
+  border-radius: 4px;
+  background: transparent;
+  border: 1px solid var(--line);
+  color: var(--fg-mute);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  flex-shrink: 0;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+.plan-list-add-btn:hover { border-color: var(--accent); color: var(--accent); }
 
 .plan-list-day__date {
   font-family: var(--mono);
