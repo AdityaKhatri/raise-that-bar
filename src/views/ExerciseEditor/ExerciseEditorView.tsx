@@ -37,6 +37,7 @@ export function ExerciseEditorView({ onBack }: Props) {
     setExercises(all.sort((a, b) => a.name.localeCompare(b.name)));
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   function showToast(msg: string) {
@@ -86,7 +87,7 @@ export function ExerciseEditorView({ onBack }: Props) {
     e.stopPropagation();
     setSelected(prev => {
       const next = new Set(prev);
-      next.has(id) ? next.delete(id) : next.add(id);
+      if (next.has(id)) next.delete(id); else next.add(id);
       return next;
     });
   }

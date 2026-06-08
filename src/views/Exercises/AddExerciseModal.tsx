@@ -52,6 +52,7 @@ export function AddExerciseModal({ open, onClose, onSave, initial }: AddExercise
   // Reset form whenever modal opens or initial changes
   useEffect(() => {
     if (open) {
+      // eslint-disable-next-line react-hooks/set-state-in-effect
       setName(initial?.name ?? '');
       setMuscleGroup(initial?.muscleGroup ?? '');
       setSecondary(initial?.secondaryMuscles.join(', ') ?? '');

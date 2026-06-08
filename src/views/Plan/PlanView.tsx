@@ -72,6 +72,7 @@ export function PlanView() {
       date: selectedDate,
       workouts: [...(existing?.workouts ?? []), { workoutId: workout.id, note: '' }],
       notes: existing?.notes ?? '',
+      // eslint-disable-next-line react-hooks/purity
       updatedAt: Date.now(),
     };
     await putPlanDay(updated);
@@ -86,6 +87,7 @@ export function PlanView() {
     if (remaining.length === 0) {
       await deletePlanDay(date);
     } else {
+      // eslint-disable-next-line react-hooks/purity
       await putPlanDay({ ...existing, workouts: remaining, updatedAt: Date.now() });
     }
     await reload();

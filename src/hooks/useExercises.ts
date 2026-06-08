@@ -44,6 +44,7 @@ export function useExercises(filters?: ExerciseFilters) {
     }
   }, []);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   const saveExercise = useCallback(async (ex: Exercise) => {

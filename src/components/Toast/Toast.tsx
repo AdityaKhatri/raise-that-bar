@@ -32,6 +32,7 @@ interface ToastEntry { id: number; message: string; kind: ToastKind }
 
 let _nextId = 0;
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useToast() {
   const [toasts, setToasts] = useState<ToastEntry[]>([]);
 

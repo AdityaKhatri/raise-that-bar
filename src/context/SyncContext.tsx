@@ -85,7 +85,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
         await completeAfterRedirect(redirectResult.token, redirectResult.intent);
       }
     });
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   // Handles the post-redirect auth completion for both 'connect' and 'restore'.
   async function completeAfterRedirect(token: string, intent: OAuthIntent) {
@@ -156,7 +156,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       const msg = err instanceof Error ? err.message : String(err);
       setState(s => ({ ...s, syncing: false, error: `Connect failed: ${msg}` }));
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   async function syncNowInternal(token?: string) {
     try {
@@ -181,7 +181,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
 
   const syncNow = useCallback(async () => {
     await syncNowInternal();
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   const disconnect = useCallback(async () => {
     cachedToken = null;
@@ -230,7 +230,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       setState(s => ({ ...s, syncing: false, error: `Restore failed: ${msg}` }));
       throw err;
     }
-  }, []); // eslint-disable-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <SyncContext.Provider value={{
@@ -246,6 +246,7 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useSyncContext(): SyncContextValue {
   const ctx = useContext(SyncContext);
   if (!ctx) throw new Error('useSyncContext must be used within SyncProvider');

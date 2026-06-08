@@ -18,6 +18,7 @@ export function useSessions(filter: SessionFilter = 'all') {
     setLoading(false);
   }, [filter]);
 
+  // eslint-disable-next-line react-hooks/set-state-in-effect
   useEffect(() => { load(); }, [load]);
 
   return { sessions, loading, reload: load };

@@ -76,7 +76,7 @@ export function CategoryIcon({ category, size = 16, color = 'currentColor' }: Ca
   }
 }
 
-/** Color associated with each category for accent use */
+// eslint-disable-next-line react-refresh/only-export-components
 export const CATEGORY_COLOR: Record<string, string> = {
   warmup:     '#d4a13c',
   stretching: '#5fb8a8',
@@ -85,6 +85,7 @@ export const CATEGORY_COLOR: Record<string, string> = {
   cooldown:   '#4a8fd6',
 };
 
+// eslint-disable-next-line react-refresh/only-export-components
 export const CATEGORY_LABEL: Record<string, string> = {
   warmup:     'Warm-up',
   stretching: 'Stretch',

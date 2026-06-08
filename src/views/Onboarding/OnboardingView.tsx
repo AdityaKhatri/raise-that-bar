@@ -1,4 +1,4 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { LogoFull } from '../../components/Logo/Logo';
 import { useSyncContext } from '../../context/SyncContext';
 import { getProfile, setProfile } from '../../db/profile';
@@ -48,11 +48,10 @@ interface BeforeInstallPromptEvent extends Event {
 
 function InstallBanner() {
   const [deferredPrompt, setDeferredPrompt] = useState<BeforeInstallPromptEvent | null>(null);
-  const [installed, setInstalled] = useState(false);
-  const platform = useRef(getPlatform()).current;
+  const [installed, setInstalled] = useState(() => isStandalone());
+  const platform = useMemo(() => getPlatform(), []);
 
   useEffect(() => {
-    if (isStandalone()) { setInstalled(true); return; }
 
     const handler = (e: Event) => {
       e.preventDefault();

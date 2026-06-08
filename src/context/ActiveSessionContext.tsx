@@ -92,6 +92,7 @@ export function ActiveSessionProvider({ children }: { children: React.ReactNode 
   );
 }
 
+// eslint-disable-next-line react-refresh/only-export-components
 export function useActiveSession(): ActiveSessionContextValue {
   const ctx = useContext(ActiveSessionContext);
   if (!ctx) throw new Error('useActiveSession must be used within ActiveSessionProvider');

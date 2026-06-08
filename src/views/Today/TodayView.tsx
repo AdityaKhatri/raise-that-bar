@@ -190,7 +190,7 @@ export function TodayView() {
       <WorkoutDetailPage
         workout={viewingWorkout}
         onBack={() => setViewingWorkout(null)}
-        onStart={() => { setViewingWorkout(null); startFromTemplate(viewingWorkout.id); }}
+        onStart={paused && session ? undefined : () => { setViewingWorkout(null); startFromTemplate(viewingWorkout.id); }}
       />
     );
   }
@@ -220,7 +220,7 @@ export function TodayView() {
         </div>
 
         {/* Weekly ring + date nav */}
-        <WeekRing sessionDates={weekSessionDates} />
+        <WeekRing sessionDates={weekSessionDates} selectedDate={selectedNutritionDate} onSelect={setSelectedNutritionDate} />
         <DateNav date={selectedNutritionDate} onChange={setSelectedNutritionDate} />
 
         {/* Workouts / Movement */}
@@ -233,16 +233,20 @@ export function TodayView() {
           const hasPlanned = day && day.workouts.length > 0;
           const hasAnything = hasPlanned || unplannedSessions.length > 0;
 
+          const pausedSession = paused && session ? session : null;
+
           return (
             <div className="plan-section">
               <div className="plan-section-header">
                 <span className="plan-section-label" style={{ marginBottom: 0 }}>Workouts</span>
-                <button className="btn outline btn-sm" onClick={startFreestyle}>
-                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                    <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
-                  </svg>
-                  Freestyle
-                </button>
+                {!pausedSession && (
+                  <button className="btn outline btn-sm" onClick={startFreestyle}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
+                      <line x1="12" y1="5" x2="12" y2="19" /><line x1="5" y1="12" x2="19" y2="12" />
+                    </svg>
+                    Freestyle
+                  </button>
+                )}
               </div>
 
               {hasPlanned && day!.workouts.map(pw => {
@@ -253,7 +257,9 @@ export function TodayView() {
                     workoutId={pw.workoutId}
                     note={pw.note}
                     doneSession={doneSession}
+                    pausedSession={pausedSession}
                     onEdit={() => resumeSession(doneSession!)}
+                    onResume={unpauseSession}
                     onView={w => setViewingWorkout(w)}
                     onViewSession={s => setViewingSession(s)}
                   />
@@ -345,14 +351,29 @@ export function TodayView() {
 // ─── Week Ring ────────────────────────────────────────────────────────────────
 
 const DAY_LETTER: Record<number, string> = { 0: 'S', 1: 'M', 2: 'T', 3: 'W', 4: 'T', 5: 'F', 6: 'S' };
+const MONTHS = ['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
 
-function WeekRing({ sessionDates }: { sessionDates: Set<string> }) {
-  const today = new Date(TODAY + 'T00:00:00');
-  const daysSinceSat = today.getDay() === 6 ? 0 : today.getDay() + 1;
+function formatWeekRange(startIso: string, endIso: string): string {
+  const [, sm, sd] = startIso.split('-').map(Number);
+  const [, em, ed] = endIso.split('-').map(Number);
+  if (sm === em) return `${MONTHS[sm - 1]} ${sd}–${ed}`;
+  return `${MONTHS[sm - 1]} ${sd} – ${MONTHS[em - 1]} ${ed}`;
+}
 
-  // Active streak — consecutive workout days backwards from today (or yesterday)
+function WeekRing({ sessionDates, selectedDate, onSelect }: {
+  sessionDates: Set<string>;
+  selectedDate: string;
+  onSelect: (date: string) => void;
+}) {
+  const todayDate = new Date(TODAY + 'T00:00:00');
+  const selDate = new Date(selectedDate + 'T00:00:00');
+
+  // Week anchors to whichever Saturday is on or before selectedDate
+  const daysSinceSat = selDate.getDay() === 6 ? 0 : selDate.getDay() + 1;
+
+  // Streak — always computed backwards from TODAY, regardless of which week is shown
   const streakDates = new Set<string>();
-  const streakCur = new Date(today);
+  const streakCur = new Date(todayDate);
   if (!sessionDates.has(TODAY)) streakCur.setDate(streakCur.getDate() - 1);
   while (true) {
     const iso = toISODate(streakCur);
@@ -362,23 +383,27 @@ function WeekRing({ sessionDates }: { sessionDates: Set<string> }) {
   const streakCount = streakDates.size;
 
   const days = Array.from({ length: 7 }, (_, i) => {
-    const d = new Date(today);
-    d.setDate(today.getDate() - daysSinceSat + i);
+    const d = new Date(selDate);
+    d.setDate(selDate.getDate() - daysSinceSat + i);
     const iso = toISODate(d);
     return {
       iso,
       letter: DAY_LETTER[d.getDay()],
       isToday: iso === TODAY,
-      isFuture: d > today,
+      isSelected: iso === selectedDate,
+      isFuture: d > todayDate,
       hasWorkout: sessionDates.has(iso),
       isStreak: streakDates.has(iso),
     };
   });
 
+  const isCurrentWeek = days.some(d => d.isToday);
+  const weekLabel = isCurrentWeek ? 'This Week' : formatWeekRange(days[0].iso, days[6].iso);
+
   return (
     <div className="week-ring">
       <div className="week-ring__header">
-        <span className="week-ring__title">This Week</span>
+        <span className="week-ring__title">{weekLabel}</span>
         {streakCount > 0 && (
           <div className="week-streak">
             <svg width="11" height="14" viewBox="0 0 11 14" fill="var(--accent)">
@@ -396,19 +421,29 @@ function WeekRing({ sessionDates }: { sessionDates: Set<string> }) {
             : null;
 
           const sq = (
-            <div key={day.iso} className="week-day">
+            <div
+              key={day.iso}
+              className="week-day"
+              onClick={() => !day.isFuture && onSelect(day.iso)}
+              style={!day.isFuture ? { cursor: 'pointer' } : undefined}
+            >
               <div className={[
                 'week-sq',
                 day.hasWorkout ? 'week-sq--done' : '',
                 day.isToday && !day.hasWorkout ? 'week-sq--today' : '',
                 day.isFuture ? 'week-sq--future' : '',
+                day.isSelected ? 'week-sq--selected' : '',
               ].filter(Boolean).join(' ')}>
                 {day.hasWorkout
                   ? <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12" /></svg>
                   : !day.isFuture ? <div className="week-sq__dot" /> : null
                 }
               </div>
-              <span className={`week-day__lbl${day.isToday ? ' week-day__lbl--today' : ''}`}>{day.letter}</span>
+              <span className={[
+                'week-day__lbl',
+                day.isToday ? 'week-day__lbl--today' : '',
+                day.isSelected && !day.isToday ? 'week-day__lbl--selected' : '',
+              ].filter(Boolean).join(' ')}>{day.letter}</span>
             </div>
           );
 
@@ -748,11 +783,13 @@ function AddMealSheet({ onClose, onSave, initialLog }: {
   );
 }
 
-function PlannedWorkoutCard({ workoutId, note, doneSession, onEdit, onView, onViewSession }: {
+function PlannedWorkoutCard({ workoutId, note, doneSession, pausedSession, onEdit, onResume, onView, onViewSession }: {
   workoutId: string;
   note: string;
   doneSession: Session | null;
+  pausedSession: Session | null;
   onEdit: () => void;
+  onResume: () => void;
   onView: (w: Workout) => void;
   onViewSession: (s: Session) => void;
 }) {
@@ -763,11 +800,13 @@ function PlannedWorkoutCard({ workoutId, note, doneSession, onEdit, onView, onVi
   }, [workoutId]);
 
   const isDone = doneSession !== null;
+  const isPausedMatch = pausedSession !== null && pausedSession.workoutId === workoutId;
   const name = workout?.name ?? workoutId;
   const exCount = workout ? workout.groups.reduce((a, g) => a + g.blocks.length, 0) : null;
 
   function handleCardClick() {
     if (isDone) onViewSession(doneSession);
+    else if (isPausedMatch) onResume();
     else if (workout) onView(workout);
   }
 
@@ -796,6 +835,8 @@ function PlannedWorkoutCard({ workoutId, note, doneSession, onEdit, onView, onVi
             </span>
             <button className="btn outline btn-sm" onClick={e => { e.stopPropagation(); onEdit(); }}>Edit</button>
           </>
+        ) : isPausedMatch ? (
+          <button className="btn primary btn-sm" onClick={e => { e.stopPropagation(); onResume(); }}>Resume</button>
         ) : (
           <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fg-mute)" strokeWidth="2">
             <polyline points="9 18 15 12 9 6" />
@@ -824,6 +865,12 @@ function formatTime(secs: number): string {
   return `${secs}s`;
 }
 
+function formatTimerDisplay(secs: number): string {
+  const m = Math.floor(secs / 60);
+  const s = secs % 60;
+  return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+}
+
 function prescriptionLabel(block: SessionBlock, ex?: Exercise): string {
   const n = block.sets.length;
   const first = block.sets[0];
@@ -837,6 +884,8 @@ function prescriptionLabel(block: SessionBlock, ex?: Exercise): string {
   return `${n} × ${reps}${weight}`;
 }
 
+type PrevBest = { weight: number | null; reps: number | null; time: number | null };
+
 function ActiveSessionView() {
   const { session, updateSession, finishSession, discardSession, pauseSession } = useActiveSession();
   const [confirmExit, setConfirmExit] = useState(false);
@@ -846,6 +895,11 @@ function ActiveSessionView() {
   const [expandedBlock, setExpandedBlock] = useState<string | null>(null);
   const [showAllSetsFor, setShowAllSetsFor] = useState<string | null>(null);
   const [miniVideoUrl, setMiniVideoUrl] = useState<string | null>(null);
+  const [prevBestMap, setPrevBestMap] = useState<Map<string, PrevBest>>(new Map());
+  // Per-set timer: key is `${groupId}:${blockId}:${setIndex}`
+  const [timerKey, setTimerKey] = useState<string | null>(null);
+  const [timerStartedAt, setTimerStartedAt] = useState<number | null>(null);
+  const [timerSecs, setTimerSecs] = useState(0);
 
   const isEditing = session?.finishedAt !== null && session?.finishedAt !== undefined;
 
@@ -855,13 +909,54 @@ function ActiveSessionView() {
     });
   }, []);
 
+  const sessionId = session?.id ?? null;
+
+  // Load previous best per exercise from finished sessions
   useEffect(() => {
-    if (!session) return;
-    const start = session.startedAt;
-    setElapsed(Date.now() - start);
-    const interval = setInterval(() => setElapsed(Date.now() - start), 1000);
+    if (!sessionId) return;
+    getAllSessions().then(sessions => {
+      // getAllSessions returns most-recent-first; skip the current session
+      const finished = sessions.filter(s => s.finishedAt && s.id !== sessionId);
+      const map = new Map<string, PrevBest>();
+      for (const sess of finished) {
+        // Collect all completed sets per exercise in this session
+        const exSets = new Map<string, SessionSet[]>();
+        for (const group of sess.groups) {
+          for (const block of group.blocks) {
+            const done = block.sets.filter(st => st.completed);
+            if (done.length === 0) continue;
+            const existing = exSets.get(block.exerciseId) ?? [];
+            exSets.set(block.exerciseId, [...existing, ...done]);
+          }
+        }
+        for (const [exId, sets] of exSets) {
+          if (map.has(exId)) continue; // already captured from a more recent session
+          const best = sets.reduce((a, b) => {
+            if ((b.weight ?? 0) > (a.weight ?? 0)) return b;
+            if ((b.weight ?? 0) === (a.weight ?? 0) && (b.reps ?? 0) > (a.reps ?? 0)) return b;
+            return a;
+          });
+          map.set(exId, { weight: best.weight, reps: best.reps, time: best.time });
+        }
+      }
+      setPrevBestMap(map);
+    });
+  }, [sessionId]);
+
+  const sessionStartedAt = session?.startedAt ?? null;
+  useEffect(() => {
+    if (!sessionStartedAt) return;
+    const interval = setInterval(() => setElapsed(Date.now() - sessionStartedAt), 1000);
     return () => clearInterval(interval);
-  }, [session?.startedAt]);
+  }, [sessionStartedAt]);
+
+  useEffect(() => {
+    if (!timerKey || !timerStartedAt) return;
+    const interval = setInterval(() => {
+      setTimerSecs(Math.floor((Date.now() - timerStartedAt) / 1000));
+    }, 500);
+    return () => clearInterval(interval);
+  }, [timerKey, timerStartedAt]);
 
   if (!session) return null;
   const s = session;
@@ -930,7 +1025,18 @@ function ActiveSessionView() {
   function logSet(groupId: string, block: SessionBlock) {
     const si = block.sets.findIndex(st => !st.completed);
     if (si < 0) return;
-    const logged = block.sets[si];
+
+    // If a timer was running for this set, stop it and use its value
+    const thisTimerKey = `${groupId}:${block.id}:${si}`;
+    let effectiveTime = block.sets[si].time;
+    if (timerKey === thisTimerKey && timerSecs > 0) {
+      effectiveTime = timerSecs;
+      setTimerKey(null);
+      setTimerStartedAt(null);
+      setTimerSecs(0);
+    }
+
+    const logged = { ...block.sets[si], time: effectiveTime };
     const nextIdx = si + 1;
     const groups = s.groups.map(g => {
       if (g.id !== groupId) return g;
@@ -939,7 +1045,7 @@ function ActiveSessionView() {
         blocks: g.blocks.map(b => {
           if (b.id !== block.id) return b;
           const sets = b.sets.map((set, i) => {
-            if (i === si) return { ...set, completed: true };
+            if (i === si) return { ...set, completed: true, time: effectiveTime };
             // Pre-fill the immediately next set with the just-logged values
             if (i === nextIdx) return { ...set, weight: logged.weight, reps: logged.reps, time: logged.time };
             return set;
@@ -978,6 +1084,19 @@ function ActiveSessionView() {
         </div>
         <div className="session-header__right">
           <span className="session-progress-label">{doneSets}/{totalSets}</span>
+          {!isEditing && (
+            <button
+              className="icon-btn session-pause-btn"
+              onClick={() => pauseSession()}
+              aria-label="Pause session"
+              title="Pause & exit"
+            >
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor">
+                <rect x="5" y="4" width="4" height="16" rx="1" />
+                <rect x="15" y="4" width="4" height="16" rx="1" />
+              </svg>
+            </button>
+          )}
         </div>
       </div>
       <div className="session-progress">
@@ -1045,6 +1164,16 @@ function ActiveSessionView() {
                             )}
                           </div>
                           <span className="browse-row__prescription">{prescriptionLabel(block, ex)}</span>
+                          {(() => {
+                            const prev = prevBestMap.get(block.exerciseId);
+                            if (!prev) return null;
+                            const label = timeBased
+                              ? (prev.time != null ? formatTime(prev.time) : '')
+                              : [prev.weight != null ? `${prev.weight}kg` : null, prev.reps != null ? `${prev.reps} reps` : null]
+                                  .filter(Boolean).join(' × ');
+                            if (!label) return null;
+                            return <span className="browse-row__prev">Prev: {label}</span>;
+                          })()}
                         </div>
                       </button>
                       <div className="browse-row__dots" onClick={() => setExpandedBlock(isOpen ? null : blockKey)} style={{ cursor: 'pointer' }}>
@@ -1109,9 +1238,8 @@ function ActiveSessionView() {
                                     value={timeBased ? (setItem.time ?? '') : (setItem.reps ?? '')}
                                     onChange={e => {
                                       const v = e.target.value ? parseInt(e.target.value) : null;
-                                      timeBased
-                                        ? updateSet(group.id, block.id, sii, { time: v })
-                                        : updateSet(group.id, block.id, sii, { reps: v });
+                                      if (timeBased) updateSet(group.id, block.id, sii, { time: v });
+                                      else updateSet(group.id, block.id, sii, { reps: v });
                                     }}
                                   />
                                   <button
@@ -1164,24 +1292,67 @@ function ActiveSessionView() {
                                   </div>
                                 )}
 
-                                {/* Time — only for time-based */}
-                                {timeBased && (
-                                  <div className="focus-field">
-                                    <div className="focus-field__label">Time (s)</div>
-                                    <div className="focus-field__row">
-                                      <button className="nudge-btn" onClick={() => updateSet(group.id, block.id, si, { time: Math.max(1, (set.time ?? 0) - 5) })}>−5</button>
-                                      <input
-                                        className="focus-input"
-                                        type="number"
-                                        inputMode="numeric"
-                                        placeholder="—"
-                                        value={set.time ?? ''}
-                                        onChange={e => updateSet(group.id, block.id, si, { time: e.target.value ? parseInt(e.target.value) : null })}
-                                      />
-                                      <button className="nudge-btn" onClick={() => updateSet(group.id, block.id, si, { time: (set.time ?? 0) + 5 })}>+5</button>
+                                {/* Time — timer + manual input for time-based */}
+                                {timeBased && (() => {
+                                  const thisTimerKey = `${group.id}:${block.id}:${si}`;
+                                  const isRunning = timerKey === thisTimerKey;
+                                  return (
+                                    <div className="focus-field">
+                                      <div className="focus-field__label">Time</div>
+
+                                      {isRunning ? (
+                                        /* ── Live timer ── */
+                                        <div className="timer-live">
+                                          <span className="timer-live__dot" />
+                                          <span className="timer-live__display">{formatTimerDisplay(timerSecs)}</span>
+                                          <button
+                                            className="timer-live__stop"
+                                            onClick={() => {
+                                              updateSet(group.id, block.id, si, { time: timerSecs });
+                                              setTimerKey(null);
+                                              setTimerStartedAt(null);
+                                              setTimerSecs(0);
+                                            }}
+                                          >
+                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                                              <rect x="4" y="4" width="16" height="16" rx="2" />
+                                            </svg>
+                                            Stop
+                                          </button>
+                                        </div>
+                                      ) : (
+                                        /* ── Manual input + start button ── */
+                                        <>
+                                          <div className="focus-field__row">
+                                            <button className="nudge-btn" onClick={() => updateSet(group.id, block.id, si, { time: Math.max(1, (set.time ?? 0) - 5) })}>−5</button>
+                                            <input
+                                              className="focus-input"
+                                              type="number"
+                                              inputMode="numeric"
+                                              placeholder="—"
+                                              value={set.time ?? ''}
+                                              onChange={e => updateSet(group.id, block.id, si, { time: e.target.value ? parseInt(e.target.value) : null })}
+                                            />
+                                            <button className="nudge-btn" onClick={() => updateSet(group.id, block.id, si, { time: (set.time ?? 0) + 5 })}>+5</button>
+                                          </div>
+                                          <button
+                                            className="focus-timer-start"
+                                            onClick={() => {
+                                              setTimerKey(thisTimerKey);
+                                              setTimerStartedAt(Date.now());
+                                              setTimerSecs(0);
+                                            }}
+                                          >
+                                            <svg width="10" height="10" viewBox="0 0 24 24" fill="currentColor">
+                                              <polygon points="5,3 19,12 5,21" />
+                                            </svg>
+                                            Start Timer
+                                          </button>
+                                        </>
+                                      )}
                                     </div>
-                                  </div>
-                                )}
+                                  );
+                                })()}
                               </div>
 
                               <button
@@ -1196,18 +1367,51 @@ function ActiveSessionView() {
                       );
                     })()}
 
-                    {/* All done state */}
+                    {/* All done — editable sets list */}
                     {isOpen && allDone && (
-                      <div className="focus-done">
-                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-                          <polyline points="20 6 9 17 4 12" />
-                        </svg>
-                        All sets logged
-                        <button
-                          className="focus-panel__add-set"
-                          style={{ marginLeft: 'auto' }}
-                          onClick={() => addSet(group.id, block.id)}
-                        >+ extra set</button>
+                      <div className="focus-panel">
+                        <div className="focus-panel__header">
+                          <span className="focus-panel__setnum" style={{ color: 'var(--accent)' }}>
+                            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" style={{ marginRight: 5 }}>
+                              <polyline points="20 6 9 17 4 12" />
+                            </svg>
+                            All done
+                          </span>
+                          <button className="focus-panel__add-set" onClick={() => addSet(group.id, block.id)}>+ extra set</button>
+                        </div>
+                        <div className="all-sets-list">
+                          {block.sets.map((setItem, sii) => (
+                            <div key={sii} className={`all-set-row${setItem.completed ? ' all-set-row--done' : ''}`}>
+                              <span className="all-set-num">{sii + 1}</span>
+                              <input
+                                className="all-set-input"
+                                type="number"
+                                inputMode="decimal"
+                                placeholder="wt"
+                                value={setItem.weight ?? ''}
+                                onChange={e => updateSet(group.id, block.id, sii, { weight: e.target.value ? parseFloat(e.target.value) : null })}
+                              />
+                              <input
+                                className="all-set-input"
+                                type="number"
+                                inputMode="numeric"
+                                placeholder={timeBased ? 'sec' : 'reps'}
+                                value={timeBased ? (setItem.time ?? '') : (setItem.reps ?? '')}
+                                onChange={e => {
+                                  const v = e.target.value ? parseInt(e.target.value) : null;
+                                  if (timeBased) updateSet(group.id, block.id, sii, { time: v });
+                                  else updateSet(group.id, block.id, sii, { reps: v });
+                                }}
+                              />
+                              <button
+                                className={`all-set-toggle${setItem.completed ? ' done' : ''}`}
+                                onClick={() => updateSet(group.id, block.id, sii, { completed: !setItem.completed })}
+                              >
+                                <span className="dot" />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
                       </div>
                     )}
                   </div>
