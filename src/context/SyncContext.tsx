@@ -154,6 +154,11 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       await syncNowInternal(token);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      if (msg === 'popup_closed') {
+        // COOP header on Google's OAuth page severs window.opener — fall back to redirect flow
+        initiateOAuthRedirect(CLIENT_ID, SCOPE, 'connect');
+        return;
+      }
       setState(s => ({ ...s, syncing: false, error: `Connect failed: ${msg}` }));
     }
   }, []);
@@ -227,6 +232,11 @@ export function SyncProvider({ children }: { children: React.ReactNode }) {
       }));
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
+      if (msg === 'popup_closed') {
+        // COOP header on Google's OAuth page severs window.opener — fall back to redirect flow
+        initiateOAuthRedirect(CLIENT_ID, SCOPE, 'restore');
+        return;
+      }
       setState(s => ({ ...s, syncing: false, error: `Restore failed: ${msg}` }));
       throw err;
     }
