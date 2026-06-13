@@ -1,16 +1,16 @@
 <div align="center">
 
-<svg width="70" height="56" viewBox="0 0 140 112" xmlns="http://www.w3.org/2000/svg">
-  <rect x="0"   y="14" width="14" height="84"  fill="#e8e8e8" />
-  <rect x="20"  y="0"  width="14" height="112" fill="#e8e8e8" />
-  <rect x="38"  y="34" width="8"  height="44"  fill="#888" />
-  <rect x="48"  y="48" width="44" height="16"  fill="#ff5a1f" />
-  <rect x="94"  y="34" width="8"  height="44"  fill="#888" />
-  <rect x="106" y="0"  width="14" height="112" fill="#e8e8e8" />
-  <rect x="126" y="14" width="14" height="84"  fill="#e8e8e8" />
+<svg width="70" height="70" viewBox="0 0 200 200" xmlns="http://www.w3.org/2000/svg">
+  <g transform="rotate(-11 100 100)">
+    <polyline points="30,100 78,100 88,100 93,114 100,69 108,126 114,100 122,100 170,100" fill="none" stroke="#FF2D55" stroke-width="9" stroke-linejoin="round" stroke-linecap="round"/>
+    <rect x="42" y="62" width="16" height="76" rx="2" fill="#EDE6D6"/>
+    <rect x="60" y="74" width="12" height="52" rx="2" fill="#EDE6D6"/>
+    <rect x="128" y="74" width="12" height="52" rx="2" fill="#EDE6D6"/>
+    <rect x="142" y="62" width="16" height="76" rx="2" fill="#EDE6D6"/>
+  </g>
 </svg>
 
-# IRON LOG
+# RAISE THAT BAR
 
 **Plan workouts. Track sessions. See progress.**
 
@@ -24,7 +24,7 @@ A local-first PWA for strength athletes — no account required, no subscription
 
 ## What it does
 
-IronLog is a mobile-first workout tracker that lives entirely on your device. Plan your training week, log sessions in the gym, and watch your lifts trend upward over time — all without handing your data to a third party.
+Raise That Bar is a mobile-first workout tracker that lives entirely on your device. Plan your training week, log sessions in the gym, and watch your lifts trend upward over time — all without handing your data to a third party.
 
 ### Plan
 Build reusable workout templates with named groups (Warm-up, Main, Accessory, Cool-down) and exercise blocks with target sets, reps, weight, and rest. Arrange your schedule on a calendar — drag workouts between days, add notes, and see what's done vs. what's coming.
@@ -52,7 +52,7 @@ Set your name, date of birth, height, and preferred unit (kg/lb). Optionally bac
 | Storage | IndexedDB (no Dexie, hand-rolled wrapper) |
 | Charts | Chart.js |
 | Sync | Google Drive appDataFolder via GIS token model |
-| Hosting | GitHub Pages |
+| Hosting | GitHub Pages + custom domain |
 | Offline | Service worker (cache-first shell) |
 
 No external state library. No ORM. No backend. Everything runs in the browser.
@@ -90,7 +90,7 @@ See [Google Drive setup](#google-drive-setup) below for how to get that client I
 4. Create an **OAuth 2.0 Client ID** (Web application type)
 5. Add authorized JavaScript origins:
    - `http://localhost:5173` (dev)
-   - `https://<your-username>.github.io` (production)
+   - `https://raisethatbar.com` (production)
 6. Copy the client ID into `.env`:
    ```
    VITE_GOOGLE_CLIENT_ID=xxxx.apps.googleusercontent.com
@@ -101,7 +101,7 @@ See [Google Drive setup](#google-drive-setup) below for how to get that client I
 
 ## Deployment
 
-Pushing to `main` triggers a GitHub Actions workflow that builds the app and deploys it to GitHub Pages automatically.
+Pushing to `main` triggers a GitHub Actions workflow that builds the app and deploys it to GitHub Pages automatically. The site is served at [raisethatbar.com](https://raisethatbar.com) via a custom domain.
 
 To enable it in your fork:
 1. Go to **Settings → Pages**

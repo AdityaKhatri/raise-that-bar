@@ -66,10 +66,17 @@ export const THEME_PAIRS: { pairName: string; dark: ThemeInfo; light: ThemeInfo 
   },
 ];
 
-const STORAGE_KEY = 'iron_log_theme_v2';
+const STORAGE_KEY = 'rtb_theme';
+const LEGACY_KEY = 'iron_log_theme_v2';
 
 export function getTheme(): ThemeKey {
-  return (localStorage.getItem(STORAGE_KEY) as ThemeKey) ?? 'iron';
+  const val = localStorage.getItem(STORAGE_KEY)
+    ?? localStorage.getItem(LEGACY_KEY);
+  if (val && !localStorage.getItem(STORAGE_KEY)) {
+    localStorage.setItem(STORAGE_KEY, val);
+    localStorage.removeItem(LEGACY_KEY);
+  }
+  return (val as ThemeKey) ?? 'iron';
 }
 
 export function applyTheme(key?: ThemeKey) {

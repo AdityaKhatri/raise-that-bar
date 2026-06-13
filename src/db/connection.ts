@@ -1,3 +1,4 @@
+// Keep legacy name to preserve existing user data across the rename
 export const DB_NAME = 'iron-log';
 export const DB_VERSION = 3;
 

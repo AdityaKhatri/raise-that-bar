@@ -1,12 +1,12 @@
 {
-  "id": "/",
+  "id": "/iron-log/",
   "name": "Raise That Bar",
   "short_name": "RTB",
   "description": "Strength training tracker — raise that bar.",
   "lang": "en",
   "dir": "ltr",
-  "start_url": "/",
-  "scope": "/",
+  "start_url": "/iron-log/",
+  "scope": "/iron-log/",
   "display": "standalone",
   "display_override": ["window-controls-overlay", "standalone"],
   "background_color": "#0C0B0A",
@@ -14,31 +14,31 @@
   "orientation": "portrait",
   "categories": ["fitness", "health", "sports"],
   "icons": [
-    { "src": "/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-192-maskable.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
-    { "src": "/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
-    { "src": "/icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
-    { "src": "/icons/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
+    { "src": "/iron-log/icons/icon-192.png", "sizes": "192x192", "type": "image/png", "purpose": "any" },
+    { "src": "/iron-log/icons/icon-192-maskable.png", "sizes": "192x192", "type": "image/png", "purpose": "maskable" },
+    { "src": "/iron-log/icons/icon-512.png", "sizes": "512x512", "type": "image/png", "purpose": "any" },
+    { "src": "/iron-log/icons/icon-512-maskable.png", "sizes": "512x512", "type": "image/png", "purpose": "maskable" },
+    { "src": "/iron-log/icons/apple-touch-icon.png", "sizes": "180x180", "type": "image/png", "purpose": "any" }
   ],
   "shortcuts": [
     {
       "name": "Today's Workout",
       "short_name": "Today",
       "description": "Go to today's workout",
-      "url": "/",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "url": "/iron-log/",
+      "icons": [{ "src": "/iron-log/icons/icon-192.png", "sizes": "192x192" }]
     },
     {
       "name": "Exercise Library",
       "short_name": "Library",
       "description": "Browse the exercise library",
-      "url": "/#exercises",
-      "icons": [{ "src": "/icons/icon-192.png", "sizes": "192x192" }]
+      "url": "/iron-log/#exercises",
+      "icons": [{ "src": "/iron-log/icons/icon-192.png", "sizes": "192x192" }]
     }
   ],
   "screenshots": [
     {
-      "src": "/icons/icon-512.png",
+      "src": "/iron-log/icons/icon-512.png",
       "sizes": "512x512",
       "type": "image/png",
       "form_factor": "narrow",

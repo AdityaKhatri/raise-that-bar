@@ -208,7 +208,7 @@ export function App() {
   // To bridge this: when the link opens in browser mode, persist the payload in
   // localStorage so the PWA picks it up on next launch from the home screen.
   useEffect(() => {
-    const PENDING_KEY = 'iron_log_pending_import';
+    const PENDING_KEY = 'rtb_pending_import';
     const isStandalone =
       window.matchMedia('(display-mode: standalone)').matches ||
       !!(window.navigator as { standalone?: boolean }).standalone;

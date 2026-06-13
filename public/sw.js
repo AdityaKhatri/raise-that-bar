@@ -1,9 +1,9 @@
 const CACHE = 'rtb-v1';
 
 const SHELL = [
-  '/',
-  '/index.html',
-  '/manifest.webmanifest',
+  '/iron-log/',
+  '/iron-log/index.html',
+  '/iron-log/manifest.webmanifest',
 ];
 
 // ── Install ───────────────────────────────────────────────────────────────────
@@ -64,7 +64,7 @@ self.addEventListener('fetch', e => {
         caches.match(e.request).then(cached =>
           cached ||
           (e.request.mode === 'navigate'
-            ? caches.match('/index.html')
+            ? caches.match('/iron-log/index.html')
             : new Response('Offline', { status: 503, statusText: 'Service Unavailable' }))
         )
       )

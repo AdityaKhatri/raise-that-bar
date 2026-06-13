@@ -1,6 +1,6 @@
-# IronLog
+# Raise That Bar
 
-A serverless PWA for planning strength workouts and tracking progress. Hosted on GitHub Pages. Local-first (IndexedDB), with Google Drive sync planned for a later phase.
+A serverless PWA for planning strength workouts and tracking progress. Hosted on GitHub Pages at raisethatbar.com. Local-first (IndexedDB), with Google Drive sync planned for a later phase.
 
 This document is the single source of truth for the data model, intended UX, and build order. Update it as decisions evolve — never let code drift ahead of this spec without first updating the spec.
 
@@ -371,7 +371,7 @@ Each phase should ship in a working state before moving on. Don't half-build pha
 
 ### Phase 5 — Drive sync (later)
 - [ ] OAuth via Google Identity Services (no server)
-- [ ] Snapshot push: serialize all stores, upload as `iron-log.json` to app folder
+- [ ] Snapshot push: serialize all stores, upload as `rtb-backup.json` to app folder
 - [ ] Snapshot pull + merge by `updatedAt` per record
 - [ ] Conflict resolution: newer `updatedAt` wins per record
 - [ ] Sync triggers: on app open, after finishing a session, manual button

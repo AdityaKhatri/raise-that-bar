@@ -60,8 +60,8 @@ export function isIosPwa(): boolean {
 // redirects back to the app URL with #access_token=... in the hash.
 // iOS 16.4+ reopens the installed PWA URL in the same PWA context.
 
-const OAUTH_STATE_KEY  = 'iron_log_oauth_state';
-const OAUTH_INTENT_KEY = 'iron_log_oauth_intent';
+const OAUTH_STATE_KEY  = 'rtb_oauth_state';
+const OAUTH_INTENT_KEY = 'rtb_oauth_intent';
 
 export type OAuthIntent = 'connect' | 'restore';
 
@@ -195,26 +195,31 @@ export async function getUserInfo(token: string): Promise<{ email: string; name:
 // ─── Drive appDataFolder helpers ──────────────────────────────────────────────
 
 const BACKUP_FILE_NAME = 'rtb-backup.json';
+const LEGACY_BACKUP_FILE_NAME = 'iron-log-backup.json';
 const DRIVE_FILES_URL = 'https://www.googleapis.com/drive/v3/files';
 const DRIVE_UPLOAD_URL = 'https://www.googleapis.com/upload/drive/v3/files';
 
 export async function findBackupFile(token: string): Promise<string | null> {
-  const params = new URLSearchParams({
-    spaces: 'appDataFolder',
-    fields: 'files(id,name)',
-    q: `name = '${BACKUP_FILE_NAME}'`,
-  });
+  // Look for the new name first, fall back to the legacy name
+  for (const name of [BACKUP_FILE_NAME, LEGACY_BACKUP_FILE_NAME]) {
+    const params = new URLSearchParams({
+      spaces: 'appDataFolder',
+      fields: 'files(id,name)',
+      q: `name = '${name}'`,
+    });
 
-  const res = await fetch(`${DRIVE_FILES_URL}?${params}`, {
-    headers: { Authorization: `Bearer ${token}` },
-  });
+    const res = await fetch(`${DRIVE_FILES_URL}?${params}`, {
+      headers: { Authorization: `Bearer ${token}` },
+    });
 
-  if (!res.ok) {
-    throw new Error(`findBackupFile failed: ${res.status}`);
+    if (!res.ok) {
+      throw new Error(`findBackupFile failed: ${res.status}`);
+    }
+
+    const data = await res.json() as { files: Array<{ id: string; name: string }> };
+    if (data.files.length > 0) return data.files[0].id;
   }
-
-  const data = await res.json() as { files: Array<{ id: string; name: string }> };
-  return data.files.length > 0 ? data.files[0].id : null;
+  return null;
 }
 
 export async function downloadBackup(token: string, fileId: string): Promise<unknown> {
@@ -262,7 +267,7 @@ export async function uploadBackup(
       parents: ['appDataFolder'],
     };
 
-    const boundary = 'iron_log_boundary';
+    const boundary = 'rtb_boundary';
     const multipart = [
       `--${boundary}`,
       'Content-Type: application/json; charset=UTF-8',
