@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { getAllWorkouts, putWorkout, deleteWorkout } from '../../db/workouts';
 import { getAllExercises } from '../../db/exercises';
+import { getAllSessions } from '../../db/sessions';
 import { Modal } from '../../components/Modal/Modal';
 import { SearchBar } from '../../components/SearchBar/SearchBar';
 import { CategoryIcon, CATEGORY_COLOR, CATEGORY_LABEL } from '../../components/CategoryIcon/CategoryIcon';
@@ -14,7 +15,7 @@ import { decodeWorkoutPayload, previewImport } from '../../lib/share';
 import type { SharePayload, ImportPreview } from '../../lib/share';
 import { extractYouTubeId } from '../../lib/youtube';
 import { uid } from '../../lib/ids';
-import type { Workout, WorkoutGroup, WorkoutBlock, Exercise } from '../../types';
+import type { Workout, WorkoutGroup, WorkoutBlock, Exercise, Session } from '../../types';
 import './Workouts.css';
 
 const GROUP_CLASS: Record<string, string> = {
@@ -23,8 +24,11 @@ const GROUP_CLASS: Record<string, string> = {
 };
 
 export function WorkoutsView() {
-  const [workouts, setWorkouts] = useState<Workout[]>([]);
+  const [allWorkouts, setAllWorkouts] = useState<Workout[]>([]);
+  const [sessions, setSessions] = useState<Session[]>([]);
   const [loading, setLoading] = useState(true);
+  const [search, setSearch] = useState('');
+  const [showArchived, setShowArchived] = useState(false);
   const [viewing, setViewing] = useState<Workout | null>(null);
   const [editing, setEditing] = useState<Workout | null>(null);
   const [sharing, setSharing] = useState<Workout | null>(null);
@@ -32,21 +36,52 @@ export function WorkoutsView() {
   const [importState, setImportState] = useState<{ payload: SharePayload; preview: ImportPreview } | null>(null);
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
   const [scanError, setScanError] = useState<string | null>(null);
-  const [confirmDelete, setConfirmDelete] = useState<string | null>(null); // workout id
+  const [confirmDelete, setConfirmDelete] = useState<string | null>(null);
+  const [confirmArchive, setConfirmArchive] = useState<string | null>(null);
   const [aiImporting, setAiImporting] = useState(false);
   const [addOpen, setAddOpen] = useState(false);
+
+  // Count sessions per workoutId
+  const usageCount = useMemo(() => {
+    const map = new Map<string, number>();
+    for (const s of sessions) {
+      if (s.workoutId) map.set(s.workoutId, (map.get(s.workoutId) ?? 0) + 1);
+    }
+    return map;
+  }, [sessions]);
+
+  const activeWorkouts = useMemo(() => {
+    const list = allWorkouts.filter(w => !w.archived);
+    if (!search) return list;
+    const q = search.toLowerCase();
+    return list.filter(w => w.name.toLowerCase().includes(q));
+  }, [allWorkouts, search]);
+
+  const archivedWorkouts = useMemo(() => {
+    const list = allWorkouts.filter(w => w.archived);
+    if (!search) return list;
+    const q = search.toLowerCase();
+    return list.filter(w => w.name.toLowerCase().includes(q));
+  }, [allWorkouts, search]);
+
+  async function handleArchive(id: string) {
+    const w = allWorkouts.find(x => x.id === id);
+    if (!w) return;
+    const updated = { ...w, archived: !w.archived, updatedAt: Date.now() };
+    await putWorkout(updated);
+    setAllWorkouts(prev => prev.map(x => x.id === id ? updated : x));
+  }
 
   async function handleDelete(id: string) {
     await deleteWorkout(id);
     setConfirmDelete(null);
-    setWorkouts(prev => prev.filter(w => w.id !== id));
+    setAllWorkouts(prev => prev.filter(w => w.id !== id));
   }
 
   async function handleScanDetected(raw: string) {
     setScanning(false);
     setScanError(null);
     try {
-      // Extract the encoded fragment from the URL
       const hashIdx = raw.indexOf('#import=');
       if (hashIdx === -1) { setScanError('Not a Raise That Bar QR code'); return; }
       const encoded = raw.slice(hashIdx + '#import='.length);
@@ -59,8 +94,9 @@ export function WorkoutsView() {
   }
 
   useEffect(() => {
-    getAllWorkouts().then(w => {
-      setWorkouts(w.filter(x => !x.archived));
+    Promise.all([getAllWorkouts(), getAllSessions()]).then(([w, s]) => {
+      setAllWorkouts(w);
+      setSessions(s);
       setLoading(false);
     });
   }, []);
@@ -80,14 +116,14 @@ export function WorkoutsView() {
       updatedAt: Date.now(),
     };
     await putWorkout(w);
-    setWorkouts(prev => [...prev, w]);
+    setAllWorkouts(prev => [...prev, w]);
     setEditing(w);
   }
 
   async function saveWorkout(w: Workout) {
     const updated = { ...w, updatedAt: Date.now() };
     await putWorkout(updated);
-    setWorkouts(prev => prev.map(x => x.id === updated.id ? updated : x));
+    setAllWorkouts(prev => prev.map(x => x.id === updated.id ? updated : x));
     setEditing(updated);
   }
 
@@ -212,7 +248,7 @@ export function WorkoutsView() {
           onDone={names => {
             setAiImporting(false);
             setImportSuccess(names.length === 1 ? names[0] : `${names.length} workouts`);
-            getAllWorkouts().then(w => setWorkouts(w.filter(x => !x.archived)));
+            getAllWorkouts().then(setAllWorkouts);
             setTimeout(() => setImportSuccess(null), 4000);
           }}
           onCancel={() => setAiImporting(false)}
@@ -226,7 +262,7 @@ export function WorkoutsView() {
           onDone={name => {
             setImportState(null);
             setImportSuccess(name);
-            getAllWorkouts().then(w => setWorkouts(w.filter(x => !x.archived)));
+            getAllWorkouts().then(setAllWorkouts);
             setTimeout(() => setImportSuccess(null), 4000);
           }}
           onCancel={() => setImportState(null)}
@@ -263,10 +299,15 @@ export function WorkoutsView() {
         </div>
       )}
 
+      {/* Search */}
+      <div style={{ padding: '12px 20px 0' }}>
+        <SearchBar value={search} onChange={setSearch} placeholder="Search workouts…" />
+      </div>
+
       <div className="workouts-list">
         {loading ? (
           <div className="empty-state"><p>Loading…</p></div>
-        ) : workouts.length === 0 ? (
+        ) : activeWorkouts.length === 0 && !search ? (
           <div className="empty-state">
             <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5">
               <path d="M6.5 6.5h11" /><path d="M6.5 17.5h11" />
@@ -278,46 +319,142 @@ export function WorkoutsView() {
             <button className="btn primary" style={{ flex: 'none' }} onClick={createWorkout}>Create Workout</button>
           </div>
         ) : (
-          workouts.map(w => (
-            <div key={w.id} className="workout-card" onClick={() => setViewing(w)}>
-              <div className="workout-card__info">
-                <div className="workout-card__name">{w.name}</div>
-                <div className="workout-card__meta">
-                  {w.groups.length} group{w.groups.length !== 1 ? 's' : ''} ·{' '}
-                  {w.groups.reduce((a, g) => a + g.blocks.length, 0)} exercises
+          <>
+            {activeWorkouts.length === 0 && search && (
+              <div className="empty-state" style={{ padding: '32px 0' }}><p>No workouts match "{search}"</p></div>
+            )}
+            {activeWorkouts.map(w => {
+              const count = usageCount.get(w.id) ?? 0;
+              return (
+                <div key={w.id} className="workout-card" onClick={() => setViewing(w)}>
+                  <div className="workout-card__info">
+                    <div className="workout-card__name">{w.name}</div>
+                    <div className="workout-card__meta">
+                      {w.groups.length} group{w.groups.length !== 1 ? 's' : ''} ·{' '}
+                      {w.groups.reduce((a, g) => a + g.blocks.length, 0)} exercises
+                      {count > 0 && <> · {count} session{count !== 1 ? 's' : ''}</>}
+                    </div>
+                  </div>
+                  <button
+                    className="icon-btn"
+                    aria-label="Share workout"
+                    onClick={e => { e.stopPropagation(); setSharing(w); }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
+                      <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
+                      <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
+                    </svg>
+                  </button>
+                  <button
+                    className="icon-btn"
+                    aria-label="Archive workout"
+                    onClick={e => { e.stopPropagation(); setConfirmArchive(w.id); }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="21 8 21 21 3 21 3 8" /><rect x="1" y="3" width="22" height="5" /><line x1="10" y1="12" x2="14" y2="12" />
+                    </svg>
+                  </button>
+                  <button
+                    className="icon-btn"
+                    aria-label="Delete workout"
+                    onClick={e => { e.stopPropagation(); setConfirmDelete(w.id); }}
+                  >
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                      <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                    </svg>
+                  </button>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fg-mute)" strokeWidth="2">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
                 </div>
-              </div>
-              <button
-                className="icon-btn"
-                aria-label="Share workout"
-                onClick={e => { e.stopPropagation(); setSharing(w); }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <circle cx="18" cy="5" r="3"/><circle cx="6" cy="12" r="3"/><circle cx="18" cy="19" r="3"/>
-                  <line x1="8.59" y1="13.51" x2="15.42" y2="17.49"/>
-                  <line x1="15.41" y1="6.51" x2="8.59" y2="10.49"/>
-                </svg>
-              </button>
-              <button
-                className="icon-btn"
-                aria-label="Delete workout"
-                onClick={e => { e.stopPropagation(); setConfirmDelete(w.id); }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
-                  <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
-                </svg>
-              </button>
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fg-mute)" strokeWidth="2">
-                <polyline points="9 18 15 12 9 6" />
-              </svg>
-            </div>
-          ))
+              );
+            })}
+
+            {/* Archived section */}
+            {archivedWorkouts.length > 0 && (
+              <>
+                <button
+                  className="workouts-archived-toggle"
+                  onClick={() => setShowArchived(p => !p)}
+                >
+                  <svg
+                    width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"
+                    style={{ transform: showArchived ? 'rotate(90deg)' : 'none', transition: 'transform 150ms ease' }}
+                  >
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                  Archived ({archivedWorkouts.length})
+                </button>
+                {showArchived && archivedWorkouts.map(w => {
+                  const count = usageCount.get(w.id) ?? 0;
+                  return (
+                    <div key={w.id} className="workout-card workout-card--archived" onClick={() => setViewing(w)}>
+                      <div className="workout-card__info">
+                        <div className="workout-card__name">{w.name}</div>
+                        <div className="workout-card__meta">
+                          {w.groups.length} group{w.groups.length !== 1 ? 's' : ''} ·{' '}
+                          {w.groups.reduce((a, g) => a + g.blocks.length, 0)} exercises
+                          {count > 0 && <> · {count} session{count !== 1 ? 's' : ''}</>}
+                        </div>
+                      </div>
+                      <button
+                        className="icon-btn"
+                        aria-label="Unarchive workout"
+                        onClick={e => { e.stopPropagation(); setConfirmArchive(w.id); }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="21 8 21 21 3 21 3 8" /><rect x="1" y="3" width="22" height="5" /><line x1="10" y1="12" x2="14" y2="12" />
+                        </svg>
+                      </button>
+                      <button
+                        className="icon-btn"
+                        aria-label="Delete workout"
+                        onClick={e => { e.stopPropagation(); setConfirmDelete(w.id); }}
+                      >
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
+                          <polyline points="3 6 5 6 21 6"/><path d="M19 6l-1 14H6L5 6"/><path d="M10 11v6"/><path d="M14 11v6"/><path d="M9 6V4h6v2"/>
+                        </svg>
+                      </button>
+                    </div>
+                  );
+                })}
+              </>
+            )}
+          </>
         )}
       </div>
 
+      {/* Archive confirm sheet */}
+      {confirmArchive && (() => {
+        const w = allWorkouts.find(x => x.id === confirmArchive);
+        const isArchived = w?.archived;
+        return (
+          <div className="confirm-overlay" onClick={() => setConfirmArchive(null)}>
+            <div className="confirm-sheet" onClick={e => e.stopPropagation()}>
+              <h3>{isArchived ? 'Unarchive' : 'Archive'} workout?</h3>
+              <p>
+                {isArchived
+                  ? `"${w?.name}" will be moved back to your active workouts.`
+                  : `"${w?.name}" will be moved to the archived section.`}
+              </p>
+              <div className="confirm-actions">
+                <button className="btn outline btn-full" onClick={() => setConfirmArchive(null)}>Cancel</button>
+                <button
+                  className="btn primary btn-full"
+                  onClick={() => { handleArchive(confirmArchive); setConfirmArchive(null); }}
+                >
+                  {isArchived ? 'Unarchive' : 'Archive'}
+                </button>
+              </div>
+            </div>
+          </div>
+        );
+      })()}
+
       {/* Delete confirm sheet */}
       {confirmDelete && (() => {
-        const w = workouts.find(x => x.id === confirmDelete);
+        const w = allWorkouts.find(x => x.id === confirmDelete);
         return (
           <div className="confirm-overlay" onClick={() => setConfirmDelete(null)}>
             <div className="confirm-sheet" onClick={e => e.stopPropagation()}>
