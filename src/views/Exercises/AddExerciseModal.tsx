@@ -12,11 +12,14 @@ interface AddExerciseModalProps {
 }
 
 const CATEGORIES: { value: CategoryType; label: string }[] = [
-  { value: 'muscle',     label: 'Strength' },
-  { value: 'warmup',     label: 'Warm-up' },
-  { value: 'stretching', label: 'Stretch' },
-  { value: 'cardio',     label: 'Cardio' },
-  { value: 'cooldown',   label: 'Cool-down' },
+  { value: 'muscle',      label: 'Strength' },
+  { value: 'warmup',      label: 'Warm-up' },
+  { value: 'stretching',  label: 'Stretch' },
+  { value: 'cardio',      label: 'Cardio' },
+  { value: 'cooldown',    label: 'Cool-down' },
+  { value: 'yoga',        label: 'Yoga' },
+  { value: 'meditation',  label: 'Meditation' },
+  { value: 'breathing',   label: 'Breathing' },
 ];
 
 const EQUIPMENT: { value: EquipmentType; label: string }[] = [

@@ -3,7 +3,9 @@ import { useActiveSession } from '../../context/ActiveSessionContext';
 import { usePlanDay } from '../../hooks/usePlanDay';
 import { LogoMark } from '../../components/Logo/Logo';
 import { getAllSessions, deleteSession } from '../../db/sessions';
-import { getWorkout, getAllWorkouts } from '../../db/workouts';
+import { getWorkout, getAllWorkouts, putWorkout } from '../../db/workouts';
+import { WorkoutEditor } from '../Workouts/WorkoutsView';
+import { AIImportSheet } from '../../components/AIImportSheet/AIImportSheet';
 import { getSessionsByDate } from '../../db/sessions';
 import { getAllExercises } from '../../db/exercises';
 import { getNutritionLogsByDate, addNutritionLog, deleteNutritionLog, updateNutritionLog } from '../../db/nutritionLog';
@@ -342,7 +344,7 @@ export function TodayView() {
         <AddMealSheet
           onClose={() => setShowAddMeal(false)}
           onSave={async (entry) => {
-            const log = await addNutritionLog({ ...entry, protein: entry.protein ?? undefined, carbs: entry.carbs ?? undefined, date: selectedNutritionDate });
+            const log = await addNutritionLog({ ...entry, protein: entry.protein ?? undefined, carbs: entry.carbs ?? undefined, time: entry.time || undefined, date: selectedNutritionDate });
             setNutritionLogs(prev => [...prev, log].sort((a, b) => a.createdAt.localeCompare(b.createdAt)));
             setShowAddMeal(false);
           }}
@@ -354,7 +356,7 @@ export function TodayView() {
           initialLog={editingLog}
           onClose={() => setEditingLog(null)}
           onSave={async (entry) => {
-            const updated: NutritionLog = { ...editingLog, ...entry, protein: entry.protein ?? undefined, carbs: entry.carbs ?? undefined };
+            const updated: NutritionLog = { ...editingLog, ...entry, protein: entry.protein ?? undefined, carbs: entry.carbs ?? undefined, time: entry.time || undefined };
             await updateNutritionLog(updated);
             setNutritionLogs(prev =>
               prev.map(l => l.id === updated.id ? updated : l)
@@ -569,17 +571,17 @@ function NutritionSection({ logs, goal, proteinGoalG, onAdd, onEdit, onDelete }:
           <span className={`nutrition-stat__val${kcalOver ? ' --over' : ''}`}>{totalKcal.toLocaleString()}</span>
           <span className="nutrition-stat__label">{goalKcal ? `/ ${goalKcal.toLocaleString()} kcal` : 'kcal'}</span>
         </div>
+        {(hasProteinData || hasCarbsData) && (
+          <div className="nutrition-pills-group">
+            {hasProteinData && (
+              <span className={`nutrition-protein-pill${proteinOver ? ' --over' : ''}`}>{totalProtein}g prot</span>
+            )}
+            {hasCarbsData && (
+              <span className="nutrition-carbs-pill">{totalCarbs}g carb</span>
+            )}
+          </div>
+        )}
       </div>
-      {(hasProteinData || hasCarbsData) && (
-        <div className="nutrition-macros-row">
-          {hasProteinData && (
-            <span className={`nutrition-protein-pill${proteinOver ? ' --over' : ''}`}>{totalProtein}g protein</span>
-          )}
-          {hasCarbsData && (
-            <span className="nutrition-carbs-pill">{totalCarbs}g carbs</span>
-          )}
-        </div>
-      )}
 
       {/* Progress bars */}
       {goalKcal && (
@@ -602,7 +604,10 @@ function NutritionSection({ logs, goal, proteinGoalG, onAdd, onEdit, onDelete }:
                 style={{ cursor: 'pointer' }}
               >
                 <div className="nutrition-log-row__info">
-                  <span className="nutrition-log-row__name">{log.name}</span>
+                  <span className="nutrition-log-row__name">
+                    {log.time && <span className="nutrition-log-row__time">{log.time}</span>}
+                    {log.name}
+                  </span>
                   {log.notes && <span className="nutrition-log-row__notes">{log.notes}</span>}
                 </div>
                 <div className="nutrition-log-row__right">
@@ -697,7 +702,7 @@ type AiState = 'idle' | 'loading' | 'success' | 'error';
 
 function AddMealSheet({ onClose, onSave, initialLog }: {
   onClose: () => void;
-  onSave: (entry: { name: string; category: MealCategory; kcal: number; protein: number | null; carbs: number | null; notes: string; aiDescription: string }) => void;
+  onSave: (entry: { name: string; category: MealCategory; kcal: number; protein: number | null; carbs: number | null; time: string; notes: string; aiDescription: string }) => void;
   initialLog?: NutritionLog;
 }) {
   const [description, setDescription] = useState(initialLog?.aiDescription ?? '');
@@ -706,6 +711,11 @@ function AddMealSheet({ onClose, onSave, initialLog }: {
   const [kcal, setKcal] = useState(initialLog?.kcal ? String(initialLog.kcal) : '');
   const [protein, setProtein] = useState<number | null>(initialLog?.protein ?? null);
   const [carbs, setCarbs] = useState<number | null>(initialLog?.carbs ?? null);
+  const [time, setTime] = useState(() => {
+    if (initialLog?.time) return initialLog.time;
+    const now = new Date();
+    return `${String(now.getHours()).padStart(2, '0')}:${String(now.getMinutes()).padStart(2, '0')}`;
+  });
   const [notes, setNotes] = useState(initialLog?.notes ?? '');
   const [aiState, setAiState] = useState<AiState>('idle');
   const [aiError, setAiError] = useState('');
@@ -847,14 +857,22 @@ function AddMealSheet({ onClose, onSave, initialLog }: {
           <span className="meal-kcal-unit">g carb</span>
         </div>
 
-        {/* Notes */}
-        <div className="meal-field">
+        {/* Time + Notes */}
+        <div className="meal-field meal-kcal-row">
+          <input
+            className="input"
+            type="time"
+            value={time}
+            onChange={e => setTime(e.target.value)}
+            style={{ maxWidth: 110 }}
+          />
           <input
             className="input"
             type="text"
             placeholder="Notes (optional)…"
             value={notes}
             onChange={e => setNotes(e.target.value)}
+            style={{ flex: 1 }}
           />
         </div>
 
@@ -863,7 +881,7 @@ function AddMealSheet({ onClose, onSave, initialLog }: {
           <button
             className="btn primary btn-full"
             disabled={!canSave}
-            onClick={() => onSave({ name: name.trim(), category, kcal: Math.round(Number(kcal)), protein, carbs, notes, aiDescription: description.trim() })}
+            onClick={() => onSave({ name: name.trim(), category, kcal: Math.round(Number(kcal)), protein, carbs, time: time || '', notes, aiDescription: description.trim() })}
           >
             {initialLog ? 'Save Changes' : 'Add Meal'}
           </button>
@@ -942,7 +960,7 @@ function PlannedWorkoutCard({ workoutId, note, doneSession, pausedSession, onEdi
 function isTimeBased(ex: Exercise | undefined): boolean {
   if (!ex) return false;
   if (ex.defaultUnit === 'sec' || ex.defaultUnit === 'min') return true;
-  if (ex.category === 'cardio' || ex.category === 'stretching') return true;
+  if (ex.category === 'cardio' || ex.category === 'stretching' || ex.category === 'yoga' || ex.category === 'meditation' || ex.category === 'breathing') return true;
   return false;
 }
 
@@ -1667,6 +1685,9 @@ function WorkoutPickerModal({ open, onClose, onPick }: {
 }) {
   const [workouts, setWorkouts] = useState<Workout[]>([]);
   const [search, setSearch] = useState('');
+  const [createChoiceOpen, setCreateChoiceOpen] = useState(false);
+  const [aiImporting, setAiImporting] = useState(false);
+  const [editingWorkout, setEditingWorkout] = useState<Workout | null>(null);
 
   useEffect(() => {
     if (open) getAllWorkouts().then(all => setWorkouts(all.filter(w => !w.archived)));
@@ -1674,39 +1695,158 @@ function WorkoutPickerModal({ open, onClose, onPick }: {
 
   const filtered = workouts
     .filter(w => !search || w.name.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => a.name.localeCompare(b.name));
+    .sort((a, b) => b.updatedAt - a.updatedAt);
+
+  async function createNewWorkout() {
+    const w: Workout = {
+      id: uid('w'),
+      name: 'New Workout',
+      notes: '',
+      groups: [{
+        id: uid('g'),
+        name: 'Main',
+        groupType: 'main',
+        blocks: [],
+      }],
+      archived: false,
+      updatedAt: Date.now(),
+    };
+    await putWorkout(w);
+    setWorkouts(prev => [...prev, w]);
+    setEditingWorkout(w);
+  }
+
+  async function saveEditingWorkout(w: Workout) {
+    const updated = { ...w, updatedAt: Date.now() };
+    await putWorkout(updated);
+    setWorkouts(prev => prev.map(x => x.id === updated.id ? updated : x));
+    setEditingWorkout(updated);
+  }
+
+  if (editingWorkout) {
+    return (
+      <WorkoutEditor
+        workout={editingWorkout}
+        onSave={saveEditingWorkout}
+        onBack={() => setEditingWorkout(null)}
+        onDiscard={() => setEditingWorkout(null)}
+      />
+    );
+  }
 
   return (
-    <Modal open={open} onClose={onClose} title="Start Workout" size="full">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-        <SearchBar value={search} onChange={setSearch} placeholder="Search workouts…" />
-        {filtered.length === 0 ? (
-          <div className="empty-state" style={{ padding: '32px 0' }}>
-            <p>{search ? `No workouts match "${search}"` : 'No workout templates yet. Create one from the Workouts tab.'}</p>
-          </div>
-        ) : (
-          <div style={{ display: 'flex', flexDirection: 'column' }}>
-            {filtered.map(w => (
-              <button
-                key={w.id}
-                className="exercise-picker-row"
-                onClick={() => onPick(w.id)}
-              >
-                <div>
-                  <div style={{ fontWeight: 600, fontSize: 14, textAlign: 'left' }}>{w.name}</div>
-                  <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--fg-mute)', marginTop: 3, textAlign: 'left', letterSpacing: '0.08em' }}>
-                    {w.groups.length} group{w.groups.length !== 1 ? 's' : ''} · {w.groups.reduce((a, g) => a + g.blocks.length, 0)} exercises
+    <>
+      <Modal
+        open={open && !createChoiceOpen && !aiImporting}
+        onClose={() => { onClose(); setSearch(''); }}
+        title="Start Workout"
+        size="full"
+        headerRight={
+          <button className="btn outline btn-sm" onClick={() => setCreateChoiceOpen(true)}>
+            + New
+          </button>
+        }
+      >
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <SearchBar value={search} onChange={setSearch} placeholder="Search workouts…" />
+          {filtered.length === 0 ? (
+            <div className="empty-state" style={{ padding: '32px 0' }}>
+              <p>{search ? `No workouts match "${search}"` : 'No workout templates yet. Tap "+ New" to create one.'}</p>
+            </div>
+          ) : (
+            <div style={{ display: 'flex', flexDirection: 'column' }}>
+              {filtered.map(w => (
+                <button
+                  key={w.id}
+                  className="exercise-picker-row"
+                  onClick={() => { onPick(w.id); setSearch(''); }}
+                >
+                  <div>
+                    <div style={{ fontWeight: 600, fontSize: 14, textAlign: 'left' }}>{w.name}</div>
+                    <div style={{ fontFamily: 'var(--mono)', fontSize: 10, color: 'var(--fg-mute)', marginTop: 3, textAlign: 'left', letterSpacing: '0.08em' }}>
+                      {w.groups.length} group{w.groups.length !== 1 ? 's' : ''} · {w.groups.reduce((a, g) => a + g.blocks.length, 0)} exercises
+                    </div>
                   </div>
-                </div>
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fg-mute)" strokeWidth="2">
-                  <polyline points="9 18 15 12 9 6" />
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--fg-mute)" strokeWidth="2">
+                    <polyline points="9 18 15 12 9 6" />
+                  </svg>
+                </button>
+              ))}
+            </div>
+          )}
+        </div>
+      </Modal>
+
+      {createChoiceOpen && (
+        <div
+          style={{ position: 'fixed', inset: 0, zIndex: 400, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}
+          onClick={() => setCreateChoiceOpen(false)}
+        >
+          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
+          <div
+            style={{
+              position: 'relative',
+              background: 'var(--surface)',
+              borderRadius: '12px 12px 0 0',
+              paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
+              overflow: 'hidden',
+            }}
+            onClick={e => e.stopPropagation()}
+          >
+            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
+              <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--line-2)' }} />
+            </div>
+            <button
+              onClick={() => { setCreateChoiceOpen(false); createNewWorkout(); }}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 16,
+                padding: '16px 20px', background: 'none', border: 'none',
+                borderBottom: '1px solid var(--line-1)', color: 'var(--fg)',
+                fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: '0.04em',
+                cursor: 'pointer', textAlign: 'left',
+              }}
+            >
+              <span style={{ color: 'var(--fg-mute)' }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" />
+                  <line x1="12" y1="9" x2="12" y2="17" /><line x1="8" y1="13" x2="16" y2="13" />
                 </svg>
-              </button>
-            ))}
+              </span>
+              Build manually
+            </button>
+            <button
+              onClick={() => { setCreateChoiceOpen(false); setAiImporting(true); }}
+              style={{
+                width: '100%', display: 'flex', alignItems: 'center', gap: 16,
+                padding: '16px 20px', background: 'none', border: 'none',
+                color: 'var(--fg)',
+                fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: '0.04em',
+                cursor: 'pointer', textAlign: 'left',
+              }}
+            >
+              <span style={{ color: 'var(--fg-mute)' }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+                  <path d="M12 2a4 4 0 0 1 4 4v1h1a3 3 0 0 1 0 6h-1v1a4 4 0 0 1-8 0v-1H7a3 3 0 0 1 0-6h1V6a4 4 0 0 1 4-4z"/>
+                  <line x1="9" y1="12" x2="15" y2="12"/><line x1="12" y1="9" x2="12" y2="15"/>
+                </svg>
+              </span>
+              Import with AI
+            </button>
+            <div style={{ height: 8 }} />
           </div>
-        )}
-      </div>
-    </Modal>
+        </div>
+      )}
+
+      {aiImporting && (
+        <AIImportSheet
+          onDone={() => {
+            setAiImporting(false);
+            getAllWorkouts().then(all => setWorkouts(all.filter(w => !w.archived)));
+          }}
+          onCancel={() => setAiImporting(false)}
+        />
+      )}
+    </>
   );
 }
 

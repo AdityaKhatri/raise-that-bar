@@ -8,7 +8,7 @@ import { LogoMark } from '../../components/Logo/Logo';
 import type { Exercise, CategoryType, EquipmentType, DefaultUnit } from '../../types';
 import './ExerciseEditor.css';
 
-const CATEGORIES: CategoryType[] = ['warmup', 'stretching', 'muscle', 'cardio', 'cooldown'];
+const CATEGORIES: CategoryType[] = ['warmup', 'stretching', 'muscle', 'cardio', 'cooldown', 'yoga', 'meditation', 'breathing'];
 const EQUIPMENT: EquipmentType[] = ['bodyweight', 'barbell', 'dumbbell', 'cable', 'machine', 'kettlebell', 'band', 'other'];
 const UNITS: { value: DefaultUnit; label: string }[] = [
   { value: null, label: '—' }, { value: 'kg', label: 'kg' }, { value: 'lb', label: 'lb' },

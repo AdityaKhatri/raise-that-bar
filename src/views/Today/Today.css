@@ -1099,7 +1099,7 @@
 
 .nutrition-stat__val {
   font-family: var(--mono);
-  font-size: 28px;
+  font-size: 24px;
   font-weight: 700;
   color: var(--fg);
   letter-spacing: -0.03em;
@@ -1115,10 +1115,11 @@
   white-space: nowrap;
 }
 
-.nutrition-macros-row {
+.nutrition-pills-group {
   display: flex;
   gap: 6px;
-  flex-wrap: wrap;
+  align-items: center;
+  margin-left: auto;
 }
 
 /* Small macro pills */
@@ -1202,6 +1203,13 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+}
+
+.nutrition-log-row__time {
+  font-family: var(--mono);
+  font-size: 11px;
+  color: var(--fg-mute);
+  margin-right: 6px;
 }
 
 .nutrition-log-row__notes {

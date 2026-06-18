@@ -12,7 +12,6 @@ import { ExerciseEditorView } from './views/ExerciseEditor/ExerciseEditorView';
 import { OnboardingView } from './views/Onboarding/OnboardingView';
 import { ActiveSessionProvider } from './context/ActiveSessionContext';
 import { SyncProvider } from './context/SyncContext';
-import { LogoFull } from './components/Logo/Logo';
 import { getOnboardingDone, setOnboardingDone } from './db/meta';
 import { syncLibraryFromGitHub, getLibraryLastSynced } from './lib/library';
 import {
@@ -130,16 +129,6 @@ function ConditionalNav({ current, onChange, onMore }: { current: ViewId; onChan
 
 // ─── Splash screen ────────────────────────────────────────────────────────────
 
-function SplashScreen() {
-  return (
-    <div className="splash">
-      <div className="splash__logo">
-        <LogoFull markSize={50} />
-      </div>
-    </div>
-  );
-}
-
 // ─── SW update detection ──────────────────────────────────────────────────────
 
 function useUpdatePrompt() {
@@ -194,7 +183,14 @@ export function App() {
   const [importSuccess, setImportSuccess] = useState<string | null>(null);
 
   useEffect(() => {
-    getOnboardingDone().then(done => setOnboardingDoneState(done));
+    getOnboardingDone().then(done => {
+      setOnboardingDoneState(done);
+      const splash = document.getElementById('splash');
+      if (splash) {
+        splash.style.opacity = '0';
+        setTimeout(() => splash.remove(), 350);
+      }
+    });
   }, []);
 
   // Detect #import= fragment and prepare the confirmation sheet.
@@ -251,7 +247,7 @@ export function App() {
   }
 
   if (onboardingDone === null) {
-    return <SplashScreen />;
+    return null;
   }
 
   if (!onboardingDone) {

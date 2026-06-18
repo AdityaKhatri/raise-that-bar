@@ -44,12 +44,11 @@
 .plan-today-btn:hover { background: rgba(255,90,31,0.15); }
 
 /* ── Calendar tab ────────────────────────────────────────────────────────────── */
-/* Entire tab scrolls as one unit — calendar + day panel flow together */
 .plan-cal-tab {
   flex: 1;
-  overflow-y: auto;
-  -webkit-overflow-scrolling: touch;
-  overscroll-behavior: contain;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
 }
 
 .plan-weekdays {
@@ -73,20 +72,19 @@
 }
 
 .plan-cal-wrap {
-  border-bottom: 1px solid var(--line);
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
-/* Override: no outer border so it fits flush */
 .plan-view .cal-grid {
-  border-left: 0;
-  border-right: 0;
-  border-top: 0;
-  border-bottom: 0;
+  border: 0;
+  min-height: 100%;
 }
 
-/* Compact cells — height determined by content, not a fixed minimum */
 .plan-view .cal-cell {
-  min-height: 52px;
+  min-height: 0;
 }
 
 /* Day panel sits below calendar, no independent scroll */
@@ -267,12 +265,6 @@
   transition: background 120ms ease;
 }
 .plan-picker-row:hover { background: var(--surface); }
-
-.plan-picker-row--create {
-  justify-content: center;
-  border-bottom: 0;
-  padding: 16px 0;
-}
 
 /* ── Calendar pill overrides for plan ───────────────────────────────────────── */
 .cal-pill--done {

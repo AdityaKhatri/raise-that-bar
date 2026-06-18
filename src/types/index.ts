@@ -7,7 +7,8 @@ export type EquipmentType =
   | 'machine' | 'kettlebell' | 'band' | 'other';
 
 export type CategoryType =
-  | 'warmup' | 'stretching' | 'muscle' | 'cardio' | 'cooldown';
+  | 'warmup' | 'stretching' | 'muscle' | 'cardio' | 'cooldown'
+  | 'yoga' | 'meditation' | 'breathing';
 
 export type DefaultUnit = 'kg' | 'lb' | 'sec' | 'min' | null;
 
@@ -155,6 +156,7 @@ export interface NutritionLog {
   kcal: number;
   protein?: number;        // grams
   carbs?: number;          // grams
+  time?: string;           // "HH:MM" — optional meal time
   notes: string;
   aiDescription?: string;  // raw description entered for AI estimation
   createdAt: string;       // ISO datetime

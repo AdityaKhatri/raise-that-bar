@@ -240,7 +240,17 @@ export function PlanView() {
           )}
         </div>
 
-        <Modal open={pickerOpen} onClose={() => { setPickerOpen(false); setPickerSearch(''); }} title="Add Workout" size="md">
+        <Modal
+          open={pickerOpen}
+          onClose={() => { setPickerOpen(false); setPickerSearch(''); }}
+          title="Add Workout"
+          size="md"
+          headerRight={
+            <button className="btn outline btn-sm" onClick={() => { setPickerOpen(false); setPickerSearch(''); setCreateChoiceOpen(true); }}>
+              + New
+            </button>
+          }
+        >
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
             <SearchBar value={pickerSearch} onChange={setPickerSearch} placeholder="Search workouts…" />
             <div style={{ display: 'flex', flexDirection: 'column' }}>
@@ -265,12 +275,6 @@ export function PlanView() {
                     </svg>
                   </button>
                 ))}
-              <button
-                className="plan-picker-row plan-picker-row--create"
-                onClick={() => { setPickerOpen(false); setPickerSearch(''); setCreateChoiceOpen(true); }}
-              >
-                <span style={{ fontWeight: 600, fontSize: 14, color: 'var(--accent)' }}>+ Create new workout</span>
-              </button>
             </div>
           </div>
         </Modal>
@@ -422,7 +426,7 @@ export function PlanView() {
 
           {/* Calendar grid */}
           <div className="plan-cal-wrap">
-            <div className="cal-grid">
+            <div className="cal-grid" style={{ gridTemplateRows: `repeat(${Math.ceil(cells.length / 7)}, 1fr)` }}>
               {cells.map((day, i) => {
                 if (!day) return <div key={`empty-${i}`} className="cal-cell muted" />;
                 const m = String(month + 1).padStart(2, '0');

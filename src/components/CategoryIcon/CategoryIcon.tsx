@@ -65,6 +65,42 @@ export function CategoryIcon({ category, size = 16, color = 'currentColor' }: Ca
         </svg>
       );
 
+    case 'yoga':
+      // Lotus / person in pose
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="4.5" r="1.5" />
+          <path d="M9 21h6" />
+          <path d="M12 8v5" />
+          <path d="M7 13c0-2 2-3 5-3s5 1 5 3" />
+          <path d="M5 17c1-2 3-3 7-3s6 1 7 3" />
+        </svg>
+      );
+
+    case 'meditation':
+      // Person meditating / zen circle
+      return (
+        <svg {...props}>
+          <circle cx="12" cy="5" r="1.5" />
+          <path d="M12 8v4" />
+          <path d="M8 20c0-2 1.5-4 4-4s4 2 4 4" />
+          <path d="M7 12l5 2 5-2" />
+          <circle cx="12" cy="12" r="9" strokeDasharray="3 3" />
+        </svg>
+      );
+
+    case 'breathing':
+      // Lungs / wind
+      return (
+        <svg {...props}>
+          <path d="M12 4v6" />
+          <path d="M8 10c-3 0-5 2-5 5s2 5 5 5c1.5 0 3-.5 4-2" />
+          <path d="M16 10c3 0 5 2 5 5s-2 5-5 5c-1.5 0-3-.5-4-2" />
+          <path d="M12 10c0 4-2 6-2 8" />
+          <path d="M12 10c0 4 2 6 2 8" />
+        </svg>
+      );
+
     default:
       // Generic activity circle
       return (
@@ -83,6 +119,9 @@ export const CATEGORY_COLOR: Record<string, string> = {
   muscle:     '#ff5a1f',
   cardio:     '#6aa86a',
   cooldown:   '#4a8fd6',
+  yoga:       '#b07cd8',
+  meditation: '#8b9dc3',
+  breathing:  '#59b8c9',
 };
 
 // eslint-disable-next-line react-refresh/only-export-components
@@ -92,4 +131,7 @@ export const CATEGORY_LABEL: Record<string, string> = {
   muscle:     'Strength',
   cardio:     'Cardio',
   cooldown:   'Cool-down',
+  yoga:       'Yoga',
+  meditation: 'Meditation',
+  breathing:  'Breathing',
 };

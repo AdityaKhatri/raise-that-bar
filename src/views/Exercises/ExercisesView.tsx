@@ -17,6 +17,9 @@ const CATEGORY_OPTIONS = [
   { value: 'stretching', label: 'Stretching' },
   { value: 'cardio', label: 'Cardio' },
   { value: 'cooldown', label: 'Cool-down' },
+  { value: 'yoga', label: 'Yoga' },
+  { value: 'meditation', label: 'Meditation' },
+  { value: 'breathing', label: 'Breathing' },
 ];
 
 const EQUIPMENT_OPTIONS = [
