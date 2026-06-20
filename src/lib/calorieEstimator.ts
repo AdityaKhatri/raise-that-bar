@@ -23,11 +23,15 @@ const CARDIO_MET_OVERRIDES: Array<{ keywords: string[]; met: number }> = [
   { keywords: ['stair', 'stairs'],          met: 9.0 },
 ];
 
+function activeBlocks(group: SessionGroup) {
+  return group.blocks.filter(b => !b.skipped);
+}
+
 function getMet(group: SessionGroup): number {
   const base = GROUP_MET[group.groupType] ?? 4.0;
   if (group.groupType !== 'cardio') return base;
 
-  for (const block of group.blocks) {
+  for (const block of activeBlocks(group)) {
     const name = block.exerciseName.toLowerCase();
     for (const override of CARDIO_MET_OVERRIDES) {
       if (override.keywords.some(k => name.includes(k))) return override.met;
@@ -36,21 +40,20 @@ function getMet(group: SessionGroup): number {
   return base;
 }
 
-function effectiveDurationHours(session: Session): number {
-  const sessionSec = session.durationMs != null ? session.durationMs / 1000 : 0;
+function groupTimedSeconds(group: SessionGroup): number {
+  let sec = 0;
+  for (const b of activeBlocks(group))
+    for (const s of b.sets)
+      if (s.completed && s.time != null) sec += s.time;
+  return sec;
+}
 
-  let maxSetTimeSec = 0;
-  for (const group of session.groups) {
-    for (const block of group.blocks) {
-      for (const set of block.sets) {
-        if (set.completed && set.time != null && set.time > maxSetTimeSec) {
-          maxSetTimeSec = set.time;
-        }
-      }
-    }
-  }
-
-  return Math.max(sessionSec, maxSetTimeSec) / 3600;
+function groupCompletedUntimed(group: SessionGroup): number {
+  let n = 0;
+  for (const b of activeBlocks(group))
+    for (const s of b.sets)
+      if (s.completed && s.time == null) n++;
+  return n;
 }
 
 export function estimateSessionKcal(
@@ -59,18 +62,31 @@ export function estimateSessionKcal(
 ): number | null {
   if (!weightKg || weightKg <= 0) return null;
 
-  const totalHours = effectiveDurationHours(session);
-  if (totalHours <= 0) return null;
-
-  const groups = session.groups.filter(g => g.blocks.length > 0);
+  const groups = session.groups.filter(g => activeBlocks(g).length > 0);
   if (groups.length === 0) return null;
 
-  const hoursPerGroup = totalHours / groups.length;
+  const sessionSec = session.durationMs != null ? session.durationMs / 1000 : 0;
 
-  const total = groups.reduce((sum, group) => {
-    return sum + getMet(group) * weightKg * hoursPerGroup;
-  }, 0);
+  // Timed sets (cardio, stretching, etc.) use their logged time directly.
+  // Remaining session time is split across untimed sets (strength) by count.
+  const timedPerGroup = groups.map(g => groupTimedSeconds(g));
+  const untimedPerGroup = groups.map(g => groupCompletedUntimed(g));
+  const totalTimedSec = timedPerGroup.reduce((a, b) => a + b, 0);
+  const totalUntimed = untimedPerGroup.reduce((a, b) => a + b, 0);
 
+  const remainingSec = Math.max(sessionSec - totalTimedSec, 0);
+
+  let total = 0;
+  for (let i = 0; i < groups.length; i++) {
+    const met = getMet(groups[i]);
+    const timedHours = timedPerGroup[i] / 3600;
+    const untimedHours = totalUntimed > 0
+      ? (remainingSec * (untimedPerGroup[i] / totalUntimed)) / 3600
+      : 0;
+    total += met * weightKg * (timedHours + untimedHours);
+  }
+
+  if (total <= 0) return null;
   return Math.round(total);
 }
 

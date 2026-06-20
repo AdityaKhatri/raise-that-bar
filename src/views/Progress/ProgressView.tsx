@@ -149,15 +149,50 @@ interface ExercisePoint {
   volume: number;
 }
 
+function formatDurationShort(ms: number): string {
+  const totalMin = Math.round(ms / 60_000);
+  if (totalMin < 60) return `${totalMin}m`;
+  const h = Math.floor(totalMin / 60);
+  const m = totalMin % 60;
+  return m > 0 ? `${h}h ${m}m` : `${h}h`;
+}
+
 function TrainingTab({ sessions, exercises }: { sessions: Session[]; exercises: Exercise[] }) {
   const [search, setSearch] = useState('');
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [showDropdown, setShowDropdown] = useState(false);
 
+  const finished = sessions.filter(s => s.finishedAt);
+
+  // ── Overview metrics ─────────────────────────────────────────────────────
+  const totalSessions = finished.length;
+  const totalVolume = finished.reduce((sum, s) => {
+    for (const g of s.groups) for (const b of g.blocks) for (const st of b.sets)
+      if (st.completed && st.weight && st.reps) sum += st.weight * st.reps;
+    return sum;
+  }, 0);
+  const totalDuration = finished.reduce((sum, s) => sum + (s.durationMs ?? 0), 0);
+  const totalKcal = finished.reduce((sum, s) => sum + (s.estimatedKcal ?? 0), 0);
+
+  // Weekly consistency — last 12 weeks
+  const now = new Date();
+  const weekBars: { label: string; value: number }[] = [];
+  for (let i = 11; i >= 0; i--) {
+    const weekStart = new Date(now);
+    weekStart.setDate(now.getDate() - now.getDay() - i * 7);
+    const weekEnd = new Date(weekStart);
+    weekEnd.setDate(weekStart.getDate() + 7);
+    const startISO = weekStart.toISOString().slice(0, 10);
+    const endISO = weekEnd.toISOString().slice(0, 10);
+    const count = finished.filter(s => s.date >= startISO && s.date < endISO).length;
+    const label = i === 0 ? 'Now' : `${weekStart.toLocaleDateString('en', { month: 'short', day: 'numeric' }).replace(' ', '')}`;
+    weekBars.push({ label, value: count });
+  }
+
   // Find exercises that appear in at least one finished session
   const exerciseMap = new Map(exercises.map(e => [e.id, e]));
   const usedIds = new Set<string>();
-  sessions.filter(s => s.finishedAt).forEach(s =>
+  finished.forEach(s =>
     s.groups.forEach(g => g.blocks.forEach(b => usedIds.add(b.exerciseId)))
   );
   const usedExercises = [...usedIds]
@@ -198,6 +233,36 @@ function TrainingTab({ sessions, exercises }: { sessions: Session[]; exercises: 
 
   return (
     <div className="prog-tab-content">
+      {/* Overview stats */}
+      <div className="prog-section">
+        <div className="prog-bw-stats">
+          <div className="prog-bw-stat">
+            <span className="prog-bw-stat-val">{totalSessions}</span>
+            <span className="prog-bw-stat-label">Sessions</span>
+          </div>
+          <div className="prog-bw-stat">
+            <span className="prog-bw-stat-val">{totalVolume >= 1000 ? `${(totalVolume / 1000).toFixed(1)}k` : totalVolume}</span>
+            <span className="prog-bw-stat-label">Total vol (kg)</span>
+          </div>
+          <div className="prog-bw-stat">
+            <span className="prog-bw-stat-val">{formatDurationShort(totalDuration)}</span>
+            <span className="prog-bw-stat-label">Total time</span>
+          </div>
+          {totalKcal > 0 && (
+            <div className="prog-bw-stat">
+              <span className="prog-bw-stat-val">{totalKcal >= 1000 ? `${(totalKcal / 1000).toFixed(1)}k` : Math.round(totalKcal)}</span>
+              <span className="prog-bw-stat-label">Kcal burned</span>
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* Weekly consistency */}
+      <div className="prog-section">
+        <div className="prog-chart-label">Weekly sessions — last 12 weeks</div>
+        <BarChart bars={weekBars} color="var(--accent)" />
+      </div>
+
       {/* Exercise search */}
       <div className="prog-section">
         <div className="prog-section-label">Exercise</div>

@@ -261,7 +261,13 @@ export function TodayView() {
           return (
             <div className="plan-section">
               <div className="plan-section-header">
-                <span className="plan-section-label" style={{ marginBottom: 0 }}>Workouts</span>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <span className="plan-section-label" style={{ marginBottom: 0 }}>Workouts</span>
+                  {(() => {
+                    const totalBurned = allSessions.reduce((sum, s) => sum + (s.estimatedKcal ?? 0), 0);
+                    return totalBurned > 0 ? <span className="nutrition-burned-pill">{`−${totalBurned}`} kcal</span> : null;
+                  })()}
+                </div>
                 {!pausedSession && (
                   <div style={{ display: 'flex', gap: 6 }}>
                     <button className="btn outline btn-sm" onClick={() => setShowWorkoutPicker(true)}>
@@ -340,7 +346,6 @@ export function TodayView() {
           logs={nutritionLogs}
           goal={calorieGoal}
           proteinGoalG={proteinGoalG}
-          burnedKcal={Array.from(doneSessions.values()).reduce((sum, s) => sum + (s.estimatedKcal ?? 0), 0)}
           onAdd={() => setShowAddMeal(true)}
           onEdit={log => setEditingLog(log)}
           onDelete={async (id) => {
@@ -540,11 +545,10 @@ const CATEGORY_DISPLAY: Record<MealCategory, string> = {
   misc: 'Misc',
 };
 
-function NutritionSection({ logs, goal, proteinGoalG, burnedKcal, onAdd, onEdit, onDelete }: {
+function NutritionSection({ logs, goal, proteinGoalG, onAdd, onEdit, onDelete }: {
   logs: NutritionLog[];
   goal: CalorieGoalLog | null;
   proteinGoalG: number | null;
-  burnedKcal: number;
   onAdd: () => void;
   onEdit: (log: NutritionLog) => void;
   onDelete: (id: string) => void;
@@ -588,16 +592,13 @@ function NutritionSection({ logs, goal, proteinGoalG, burnedKcal, onAdd, onEdit,
           <span className={`nutrition-stat__val${kcalOver ? ' --over' : ''}`}>{totalKcal.toLocaleString()}</span>
           <span className="nutrition-stat__label">{goalKcal ? `/ ${goalKcal.toLocaleString()} kcal` : 'kcal'}</span>
         </div>
-        {(hasProteinData || hasCarbsData || burnedKcal > 0) && (
+        {(hasProteinData || hasCarbsData) && (
           <div className="nutrition-pills-group">
             {hasProteinData && (
               <span className={`nutrition-protein-pill${proteinOver ? ' --over' : ''}`}>{totalProtein}g prot</span>
             )}
             {hasCarbsData && (
               <span className="nutrition-carbs-pill">{totalCarbs}g carb</span>
-            )}
-            {burnedKcal > 0 && (
-              <span className="nutrition-burned-pill">{`−${burnedKcal}`} burned</span>
             )}
           </div>
         )}
@@ -980,6 +981,7 @@ function effectiveSessionDuration(session: Session): number | null {
   let timedSetsTotalSec = 0;
   for (const g of session.groups) {
     for (const b of g.blocks) {
+      if (b.skipped) continue;
       for (const s of b.sets) {
         if (s.completed && s.time != null) timedSetsTotalSec += s.time;
       }
