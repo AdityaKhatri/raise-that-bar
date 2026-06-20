@@ -2,7 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useActiveSession } from '../../context/ActiveSessionContext';
 import { usePlanDay } from '../../hooks/usePlanDay';
 import { LogoMark } from '../../components/Logo/Logo';
-import { getAllSessions, deleteSession } from '../../db/sessions';
+import { getAllSessions, deleteSession, putSession } from '../../db/sessions';
 import { getWorkout, getAllWorkouts, putWorkout } from '../../db/workouts';
 import { WorkoutEditor } from '../Workouts/WorkoutsView';
 import { AIImportSheet } from '../../components/AIImportSheet/AIImportSheet';
@@ -12,12 +12,18 @@ import { getNutritionLogsByDate, addNutritionLog, deleteNutritionLog, updateNutr
 import { getAllBodyweight } from '../../db/bodyweight';
 import { getActiveGoalForDate } from '../../db/calorieGoalLog';
 import { Modal } from '../../components/Modal/Modal';
+import { BottomSheet } from '../../components/BottomSheet/BottomSheet';
 import { SearchBar } from '../../components/SearchBar/SearchBar';
 import { Topbar } from '../../components/Topbar/Topbar';
 import { CategoryIcon, CATEGORY_COLOR, CATEGORY_LABEL } from '../../components/CategoryIcon/CategoryIcon';
+import { FilterChips } from '../../components/FilterChips/FilterChips';
 import { today, toISODate, formatDisplayDate, formatDuration } from '../../lib/date';
 import { extractYouTubeId } from '../../lib/youtube';
 import { uid } from '../../lib/ids';
+import { estimateWithBodyweight } from '../../lib/calorieEstimator';
+import { MUSCLE_GROUP_MAP, MUSCLE_REGIONS, type MuscleRegion } from '../Analyze/bodyModel';
+import { normaliseScores, type MuscleStats } from '../Analyze/analyzeEngine';
+import { BodySvg } from '../Analyze/BodySvg';
 import type { Session, SessionGroup, SessionBlock, SessionSet, Workout, Exercise, NutritionLog, CalorieGoalLog, MealCategory } from '../../types';
 import './Today.css';
 
@@ -108,6 +114,7 @@ export function TodayView() {
   const [proteinGoalG, setProteinGoalG] = useState<number | null>(null);
   const [weekSessionDates, setWeekSessionDates] = useState<Set<string>>(new Set());
   const [showWorkoutPicker, setShowWorkoutPicker] = useState(false);
+  const [finishedSummary, setFinishedSummary] = useState<Session | null>(null);
 
   // Load finished sessions for the selected date
   useEffect(() => {
@@ -176,7 +183,11 @@ export function TodayView() {
     await startSession(s);
   }
 
-  if (session && !paused) return <ActiveSessionView />;
+  if (session && !paused) return <ActiveSessionView onFinish={s => setFinishedSummary(s)} />;
+
+  if (finishedSummary) {
+    return <SessionSummaryScreen session={finishedSummary} onDismiss={() => setFinishedSummary(null)} />;
+  }
 
   if (viewingSession) {
     return (
@@ -188,6 +199,10 @@ export function TodayView() {
           await deleteSession(viewingSession.id);
           setDoneSessions(prev => { const m = new Map(prev); m.delete(viewingSession.id); return m; });
           setViewingSession(null);
+        }}
+        onUpdate={(updated) => {
+          setViewingSession(updated);
+          setDoneSessions(prev => { const m = new Map(prev); m.set(updated.id, updated); return m; });
         }}
       />
     );
@@ -293,7 +308,7 @@ export function TodayView() {
                     <div className="plan-card__name">{s.workoutName}</div>
                     <div className="plan-card__meta">
                       {s.groups.reduce((a, g) => a + g.blocks.length, 0)} exercises
-                      {s.durationMs ? ` · ${formatDuration(s.durationMs)}` : ''}
+                      {effectiveSessionDuration(s) ? ` · ${formatDuration(effectiveSessionDuration(s)!)}` : ''}
                     </div>
                   </div>
                   <span className="plan-card__done-badge">
@@ -325,6 +340,7 @@ export function TodayView() {
           logs={nutritionLogs}
           goal={calorieGoal}
           proteinGoalG={proteinGoalG}
+          burnedKcal={Array.from(doneSessions.values()).reduce((sum, s) => sum + (s.estimatedKcal ?? 0), 0)}
           onAdd={() => setShowAddMeal(true)}
           onEdit={log => setEditingLog(log)}
           onDelete={async (id) => {
@@ -524,10 +540,11 @@ const CATEGORY_DISPLAY: Record<MealCategory, string> = {
   misc: 'Misc',
 };
 
-function NutritionSection({ logs, goal, proteinGoalG, onAdd, onEdit, onDelete }: {
+function NutritionSection({ logs, goal, proteinGoalG, burnedKcal, onAdd, onEdit, onDelete }: {
   logs: NutritionLog[];
   goal: CalorieGoalLog | null;
   proteinGoalG: number | null;
+  burnedKcal: number;
   onAdd: () => void;
   onEdit: (log: NutritionLog) => void;
   onDelete: (id: string) => void;
@@ -571,13 +588,16 @@ function NutritionSection({ logs, goal, proteinGoalG, onAdd, onEdit, onDelete }:
           <span className={`nutrition-stat__val${kcalOver ? ' --over' : ''}`}>{totalKcal.toLocaleString()}</span>
           <span className="nutrition-stat__label">{goalKcal ? `/ ${goalKcal.toLocaleString()} kcal` : 'kcal'}</span>
         </div>
-        {(hasProteinData || hasCarbsData) && (
+        {(hasProteinData || hasCarbsData || burnedKcal > 0) && (
           <div className="nutrition-pills-group">
             {hasProteinData && (
               <span className={`nutrition-protein-pill${proteinOver ? ' --over' : ''}`}>{totalProtein}g prot</span>
             )}
             {hasCarbsData && (
               <span className="nutrition-carbs-pill">{totalCarbs}g carb</span>
+            )}
+            {burnedKcal > 0 && (
+              <span className="nutrition-burned-pill">{`−${burnedKcal}`} burned</span>
             )}
           </div>
         )}
@@ -929,7 +949,7 @@ function PlannedWorkoutCard({ workoutId, note, doneSession, pausedSession, onEdi
         <div className="plan-card__meta">
           {exCount !== null ? `${exCount} exercise${exCount !== 1 ? 's' : ''}` : ''}
           {note ? ` · ${note}` : ''}
-          {isDone && doneSession.durationMs ? ` · ${formatDuration(doneSession.durationMs)}` : ''}
+          {isDone && doneSession && effectiveSessionDuration(doneSession) ? ` · ${formatDuration(effectiveSessionDuration(doneSession)!)}` : ''}
         </div>
       </div>
       <div style={{ display: 'flex', gap: 6, alignItems: 'center', flexShrink: 0 }} onClick={e => e.stopPropagation()}>
@@ -953,6 +973,21 @@ function PlannedWorkoutCard({ workoutId, note, doneSession, pausedSession, onEdi
       </div>
     </div>
   );
+}
+
+function effectiveSessionDuration(session: Session): number | null {
+  const sessionMs = session.durationMs ?? 0;
+  let timedSetsTotalSec = 0;
+  for (const g of session.groups) {
+    for (const b of g.blocks) {
+      for (const s of b.sets) {
+        if (s.completed && s.time != null) timedSetsTotalSec += s.time;
+      }
+    }
+  }
+  const timedMs = timedSetsTotalSec * 1000;
+  const result = Math.max(sessionMs, timedMs);
+  return result > 0 ? result : null;
 }
 
 // ─── Active Session View ──────────────────────────────────────────────────────
@@ -994,7 +1029,7 @@ function prescriptionLabel(block: SessionBlock, ex?: Exercise): string {
 
 type PrevBest = { weight: number | null; reps: number | null; time: number | null };
 
-function ActiveSessionView() {
+function ActiveSessionView({ onFinish }: { onFinish: (session: Session) => void }) {
   const { session, updateSession, finishSession, discardSession, pauseSession } = useActiveSession();
   const [confirmExit, setConfirmExit] = useState(false);
   const [elapsed, setElapsed] = useState(0);
@@ -1532,7 +1567,10 @@ function ActiveSessionView() {
 
         {/* Action buttons — at end of scroll, not sticky */}
         <div className="session-actions">
-          <button className="btn primary btn-full" onClick={() => finishSession()}>
+          <button className="btn primary btn-full" onClick={async () => {
+            const finished = await finishSession();
+            if (finished && !isEditing) onFinish(finished);
+          }}>
             {isEditing ? 'Save Changes' : 'Finish Session'}
           </button>
           <button className="btn ghost btn-full" onClick={() => setConfirmExit(true)}>
@@ -1572,6 +1610,9 @@ function ActiveSessionView() {
       {confirmExit && (
         <div className="discard-overlay">
           <div className="discard-sheet">
+            <button className="sheet-close-btn" onClick={() => setConfirmExit(false)} aria-label="Close">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+            </button>
             {isEditing ? (
               <>
                 <h3>Cancel editing?</h3>
@@ -1618,6 +1659,27 @@ function ActiveSessionView() {
   );
 }
 
+const PICKER_CATEGORY_OPTIONS = [
+  { value: 'muscle', label: 'Strength' },
+  { value: 'warmup', label: 'Warm-up' },
+  { value: 'stretching', label: 'Stretching' },
+  { value: 'cardio', label: 'Cardio' },
+  { value: 'cooldown', label: 'Cool-down' },
+  { value: 'yoga', label: 'Yoga' },
+  { value: 'meditation', label: 'Meditation' },
+  { value: 'breathing', label: 'Breathing' },
+];
+
+const PICKER_EQUIPMENT_OPTIONS = [
+  { value: 'barbell', label: 'Barbell' },
+  { value: 'dumbbell', label: 'Dumbbell' },
+  { value: 'bodyweight', label: 'Bodyweight' },
+  { value: 'cable', label: 'Cable' },
+  { value: 'machine', label: 'Machine' },
+  { value: 'kettlebell', label: 'Kettlebell' },
+  { value: 'band', label: 'Band' },
+];
+
 function SessionExercisePicker({ open, onClose, onPick }: {
   open: boolean;
   onClose: () => void;
@@ -1625,6 +1687,8 @@ function SessionExercisePicker({ open, onClose, onPick }: {
 }) {
   const [exercises, setExercises] = useState<Exercise[]>([]);
   const [search, setSearch] = useState('');
+  const [category, setCategory] = useState('');
+  const [equipment, setEquipment] = useState('');
 
   useEffect(() => {
     if (open) getAllExercises().then(all => setExercises(all.filter(e => !e.archived)));
@@ -1632,12 +1696,16 @@ function SessionExercisePicker({ open, onClose, onPick }: {
 
   const filtered = exercises
     .filter(e => !search || e.name.toLowerCase().includes(search.toLowerCase()) || e.muscleGroup.toLowerCase().includes(search.toLowerCase()))
+    .filter(e => !category || e.category === category)
+    .filter(e => !equipment || e.equipment === equipment)
     .sort((a, b) => a.name.localeCompare(b.name));
 
   return (
     <Modal open={open} onClose={onClose} title="Add Exercise" size="full">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
         <SearchBar value={search} onChange={setSearch} placeholder="Search…" />
+        <FilterChips options={PICKER_CATEGORY_OPTIONS} value={category} onChange={setCategory} />
+        <FilterChips options={PICKER_EQUIPMENT_OPTIONS} value={equipment} onChange={setEquipment} />
         {filtered.length === 0 ? (
           <div className="empty-state" style={{ padding: '32px 0' }}>
             <p>No exercises found. Import the library from the Library tab.</p>
@@ -1777,34 +1845,11 @@ function WorkoutPickerModal({ open, onClose, onPick }: {
         </div>
       </Modal>
 
-      {createChoiceOpen && (
-        <div
-          style={{ position: 'fixed', inset: 0, zIndex: 400, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}
-          onClick={() => setCreateChoiceOpen(false)}
-        >
-          <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
-          <div
-            style={{
-              position: 'relative',
-              background: 'var(--surface)',
-              borderRadius: '12px 12px 0 0',
-              paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
-              overflow: 'hidden',
-            }}
-            onClick={e => e.stopPropagation()}
-          >
-            <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
-              <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--line-2)' }} />
-            </div>
+      <BottomSheet open={createChoiceOpen} onClose={() => setCreateChoiceOpen(false)} title="New Workout">
             <button
               onClick={() => { setCreateChoiceOpen(false); createNewWorkout(); }}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: 16,
-                padding: '16px 20px', background: 'none', border: 'none',
-                borderBottom: '1px solid var(--line-1)', color: 'var(--fg)',
-                fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: '0.04em',
-                cursor: 'pointer', textAlign: 'left',
-              }}
+              className="bottom-sheet-action"
+              style={{ borderBottom: '1px solid var(--line-1)' }}
             >
               <span style={{ color: 'var(--fg-mute)' }}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
@@ -1816,13 +1861,7 @@ function WorkoutPickerModal({ open, onClose, onPick }: {
             </button>
             <button
               onClick={() => { setCreateChoiceOpen(false); setAiImporting(true); }}
-              style={{
-                width: '100%', display: 'flex', alignItems: 'center', gap: 16,
-                padding: '16px 20px', background: 'none', border: 'none',
-                color: 'var(--fg)',
-                fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: '0.04em',
-                cursor: 'pointer', textAlign: 'left',
-              }}
+              className="bottom-sheet-action"
             >
               <span style={{ color: 'var(--fg-mute)' }}>
                 <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
@@ -1833,9 +1872,7 @@ function WorkoutPickerModal({ open, onClose, onPick }: {
               Import with AI
             </button>
             <div style={{ height: 8 }} />
-          </div>
-        </div>
-      )}
+      </BottomSheet>
 
       {aiImporting && (
         <AIImportSheet
@@ -1850,15 +1887,170 @@ function WorkoutPickerModal({ open, onClose, onPick }: {
   );
 }
 
+// ─── Session Summary Screen (shown after finishing) ─────────────────────────
+
+function computeSessionMuscles(session: Session, exercises: Map<string, Exercise>): MuscleStats[] {
+  const scores = new Map<MuscleRegion, number>();
+  for (const r of MUSCLE_REGIONS) scores.set(r, 0);
+
+  for (const group of session.groups) {
+    for (const block of group.blocks) {
+      if (block.skipped) continue;
+      const ex = exercises.get(block.exerciseId);
+      if (!ex) continue;
+      const completedSets = block.sets.filter(s => s.completed).length;
+      if (completedSets === 0) continue;
+
+      const primaryRegions = MUSCLE_GROUP_MAP[ex.muscleGroup] ?? [];
+      const pw = primaryRegions.length > 0 ? completedSets / primaryRegions.length : 0;
+      for (const r of primaryRegions) scores.set(r, (scores.get(r) ?? 0) + pw);
+
+      for (const sec of ex.secondaryMuscles) {
+        const secRegions = MUSCLE_GROUP_MAP[sec] ?? [];
+        const sw = secRegions.length > 0 ? (completedSets * 0.5) / secRegions.length : 0;
+        for (const r of secRegions) scores.set(r, (scores.get(r) ?? 0) + sw);
+      }
+    }
+  }
+
+  return MUSCLE_REGIONS.map(r => ({
+    region: r,
+    label: r,
+    score: Math.round((scores.get(r) ?? 0) * 10) / 10,
+    totalSets: Math.round((scores.get(r) ?? 0) * 10) / 10,
+    lastTrained: null,
+  })).filter(m => m.score > 0).sort((a, b) => b.score - a.score);
+}
+
+const REGION_DISPLAY: Record<string, string> = {
+  'chest': 'Chest', 'upper-back': 'Upper Back', 'lower-back': 'Lower Back',
+  'shoulders': 'Shoulders', 'biceps': 'Biceps', 'triceps': 'Triceps',
+  'forearms': 'Forearms', 'core': 'Core', 'glutes': 'Glutes',
+  'quads': 'Quads', 'hamstrings': 'Hamstrings', 'calves': 'Calves',
+  'neck': 'Neck', 'hip-flexors': 'Hip Flexors',
+};
+
+function SessionSummaryScreen({ session, onDismiss }: { session: Session; onDismiss: () => void }) {
+  const [exerciseMap, setExerciseMap] = useState<Map<string, Exercise>>(new Map());
+
+  useEffect(() => {
+    getAllExercises().then(all => setExerciseMap(new Map(all.map(e => [e.id, e]))));
+  }, []);
+
+  const muscles = computeSessionMuscles(session, exerciseMap);
+  const heatmapScores = normaliseScores(
+    MUSCLE_REGIONS.map(r => {
+      const found = muscles.find(m => m.region === r);
+      return found ?? { region: r, label: r, score: 0, totalSets: 0, lastTrained: null };
+    })
+  );
+  const topMuscles = muscles.slice(0, 5);
+
+  const totalSets = session.groups.reduce((a, g) => a + g.blocks.reduce((b, bl) => b + bl.sets.filter(s => s.completed).length, 0), 0);
+  const totalExercises = new Set(session.groups.flatMap(g => g.blocks.filter(b => !b.skipped && b.sets.some(s => s.completed)).map(b => b.exerciseId))).size;
+
+  return (
+    <div className="summary-screen">
+      <div className="summary-screen__content">
+        <div className="summary-header">
+          <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="20 6 9 17 4 12" />
+          </svg>
+          <h2 className="summary-title">{session.workoutName}</h2>
+          <span className="summary-subtitle">Workout Complete</span>
+        </div>
+
+        <div className="summary-stats">
+          {effectiveSessionDuration(session) != null && (
+            <div className="summary-stat">
+              <span className="summary-stat__val">{formatDuration(effectiveSessionDuration(session)!)}</span>
+              <span className="summary-stat__label">Duration</span>
+            </div>
+          )}
+          {session.estimatedKcal != null && (
+            <div className="summary-stat">
+              <span className="summary-stat__val">~{session.estimatedKcal}</span>
+              <span className="summary-stat__label">kcal Burned</span>
+            </div>
+          )}
+          <div className="summary-stat">
+            <span className="summary-stat__val">{totalExercises}</span>
+            <span className="summary-stat__label">Exercises</span>
+          </div>
+          <div className="summary-stat">
+            <span className="summary-stat__val">{totalSets}</span>
+            <span className="summary-stat__label">Sets</span>
+          </div>
+        </div>
+
+        {muscles.length > 0 && (
+          <div className="summary-body-section">
+            <span className="summary-section-label">Muscles Targeted</span>
+            <BodySvg scores={heatmapScores} onTapMuscle={() => {}} />
+            <div className="summary-muscle-chips">
+              {topMuscles.map(m => (
+                <span key={m.region} className="summary-muscle-chip">
+                  {REGION_DISPLAY[m.region] ?? m.region}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <button className="btn primary btn-full summary-done-btn" onClick={onDismiss}>Done</button>
+      </div>
+    </div>
+  );
+}
+
 // ─── Session Detail Page (read-only, full screen) ────────────────────────────
 
-function SessionDetailPage({ session, onBack, onEdit, onDelete }: {
+function SessionDetailPage({ session, onBack, onEdit, onDelete, onUpdate }: {
   session: Session;
   onBack: () => void;
   onEdit: () => void;
   onDelete: () => void;
+  onUpdate: (session: Session) => void;
 }) {
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [exerciseMap, setExerciseMap] = useState<Map<string, Exercise>>(new Map());
+  const [kcalModalOpen, setKcalModalOpen] = useState(false);
+  const [kcalInput, setKcalInput] = useState('');
+  const [regenerating, setRegenerating] = useState(false);
+
+  useEffect(() => {
+    getAllExercises().then(all => setExerciseMap(new Map(all.map(e => [e.id, e]))));
+  }, []);
+
+  const muscles = computeSessionMuscles(session, exerciseMap);
+  const heatmapScores = normaliseScores(
+    MUSCLE_REGIONS.map(r => {
+      const found = muscles.find(m => m.region === r);
+      return found ?? { region: r, label: r, score: 0, totalSets: 0, lastTrained: null };
+    })
+  );
+  const topMuscles = muscles.slice(0, 5);
+  const totalSets = session.groups.reduce((a, g) => a + g.blocks.reduce((b, bl) => b + bl.sets.filter(s => s.completed).length, 0), 0);
+  const totalExercises = new Set(session.groups.flatMap(g => g.blocks.filter(b => !b.skipped && b.sets.some(s => s.completed)).map(b => b.exerciseId))).size;
+
+  async function saveKcal() {
+    const val = Math.round(Number(kcalInput));
+    if (isNaN(val) || val < 0) { setKcalModalOpen(false); return; }
+    const updated: Session = { ...session, estimatedKcal: val || null, updatedAt: Date.now() };
+    await putSession(updated);
+    onUpdate(updated);
+    setKcalModalOpen(false);
+  }
+
+  async function regenerateKcal() {
+    setRegenerating(true);
+    const kcal = await estimateWithBodyweight(session);
+    const updated: Session = { ...session, estimatedKcal: kcal, updatedAt: Date.now() };
+    await putSession(updated);
+    onUpdate(updated);
+    setKcalInput(String(kcal ?? ''));
+    setRegenerating(false);
+  }
 
   return (
     <div className="workout-editor">
@@ -1883,27 +2075,66 @@ function SessionDetailPage({ session, onBack, onEdit, onDelete }: {
         </div>
       )}
 
-      {/* Session meta row */}
-      <div className="sess-detail-meta">
-        {session.durationMs != null && (
-          <span>{formatDuration(session.durationMs)}</span>
-        )}
-        {session.notes?.trim() && (
-          <span className="sess-detail-notes">{session.notes}</span>
-        )}
-      </div>
-
       <div className="workout-editor__body">
+        {/* Stats grid */}
+        <div className="summary-stats sess-detail-stats">
+          {effectiveSessionDuration(session) != null && (
+            <div className="summary-stat">
+              <span className="summary-stat__val">{formatDuration(effectiveSessionDuration(session)!)}</span>
+              <span className="summary-stat__label">Duration</span>
+            </div>
+          )}
+          <div className="summary-stat" style={{ cursor: 'pointer' }} onClick={() => { setKcalInput(String(session.estimatedKcal ?? '')); setKcalModalOpen(true); }}>
+            <span className="summary-stat__val" style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+              {session.estimatedKcal != null ? `~${session.estimatedKcal}` : '—'}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--fg-mute)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M17 3a2.83 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
+              </svg>
+            </span>
+            <span className="summary-stat__label">kcal Burned</span>
+          </div>
+          <div className="summary-stat">
+            <span className="summary-stat__val">{totalExercises}</span>
+            <span className="summary-stat__label">Exercises</span>
+          </div>
+          <div className="summary-stat">
+            <span className="summary-stat__val">{totalSets}</span>
+            <span className="summary-stat__label">Sets</span>
+          </div>
+        </div>
+
+        {/* Muscle heatmap */}
+        {muscles.length > 0 && (
+          <div className="summary-body-section">
+            <span className="summary-section-label">Muscles Targeted</span>
+            <BodySvg scores={heatmapScores} onTapMuscle={() => {}} />
+            <div className="summary-muscle-chips">
+              {topMuscles.map(m => (
+                <span key={m.region} className="summary-muscle-chip">
+                  {REGION_DISPLAY[m.region] ?? m.region}
+                </span>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {session.notes?.trim() && (
+          <div className="sess-detail-meta">
+            <span className="sess-detail-notes">{session.notes}</span>
+          </div>
+        )}
+
+        {/* Groups / blocks / sets */}
         {session.groups.map(group => {
           const groupClass = GROUP_CLASS[group.groupType] ?? 'g-main';
           const completedSets = group.blocks.reduce((a, b) => a + b.sets.filter(st => st.completed).length, 0);
-          const totalSets = group.blocks.reduce((a, b) => a + b.sets.length, 0);
+          const totalGroupSets = group.blocks.reduce((a, b) => a + b.sets.length, 0);
 
           return (
             <div key={group.id} className={`group ${groupClass} group-editor`}>
               <div className="group-head group-editor__header">
                 <span className="gname">{group.name}</span>
-                <span className="gmeta" style={{ marginLeft: 'auto' }}>{completedSets}/{totalSets} sets</span>
+                <span className="gmeta" style={{ marginLeft: 'auto' }}>{completedSets}/{totalGroupSets} sets</span>
               </div>
 
               {group.blocks.map(block => {
@@ -1954,6 +2185,30 @@ function SessionDetailPage({ session, onBack, onEdit, onDelete }: {
           );
         })}
       </div>
+
+      <BottomSheet open={kcalModalOpen} onClose={() => setKcalModalOpen(false)} title="Calories Burned">
+        <div className="bottom-sheet-body">
+            <div className="kcal-edit-sheet__manual">
+              <input
+                type="number"
+                className="ed-input"
+                value={kcalInput}
+                onChange={e => setKcalInput(e.target.value)}
+                onKeyDown={e => { if (e.key === 'Enter') saveKcal(); }}
+                placeholder="Enter kcal"
+                autoFocus
+                style={{ flex: 1, textAlign: 'center', fontSize: 20, fontWeight: 700 }}
+              />
+              <button className="btn primary" onClick={saveKcal}>Save</button>
+            </div>
+            <div className="kcal-edit-sheet__divider">
+              <span>or</span>
+            </div>
+            <button className="btn outline btn-full" onClick={regenerateKcal} disabled={regenerating}>
+              {regenerating ? 'Calculating…' : 'Recalculate from Workout'}
+            </button>
+        </div>
+      </BottomSheet>
     </div>
   );
 }

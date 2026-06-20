@@ -1,6 +1,7 @@
 import React, { createContext, useCallback, useContext, useEffect, useState } from 'react';
 import { getActiveSession, setActiveSession } from '../db/meta';
 import { putSession } from '../db/sessions';
+import { estimateWithBodyweight } from '../lib/calorieEstimator';
 import type { Session } from '../types';
 
 interface ActiveSessionContextValue {
@@ -51,7 +52,6 @@ export function ActiveSessionProvider({ children }: { children: React.ReactNode 
   const finishSession = useCallback(async (): Promise<Session | null> => {
     if (!session) return null;
     const now = Date.now();
-    // If session was resumed from history (already had finishedAt), preserve original timing.
     const wasAlreadyFinished = session.finishedAt !== null;
     const finished: Session = {
       ...session,
@@ -59,10 +59,16 @@ export function ActiveSessionProvider({ children }: { children: React.ReactNode 
       durationMs: wasAlreadyFinished ? session.durationMs : now - session.startedAt,
       updatedAt: now,
     };
-    await putSession(finished);
+
+    const withKcal: Session = {
+      ...finished,
+      estimatedKcal: await estimateWithBodyweight(finished),
+    };
+
+    await putSession(withKcal);
     await setActiveSession(null);
     setSession(null);
-    return finished;
+    return withKcal;
   }, [session]);
 
   const discardSession = useCallback(async () => {

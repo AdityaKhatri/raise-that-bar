@@ -432,6 +432,9 @@ export function WorkoutsView() {
         return (
           <div className="confirm-overlay" onClick={() => setConfirmArchive(null)}>
             <div className="confirm-sheet" onClick={e => e.stopPropagation()}>
+              <button className="sheet-close-btn" onClick={() => setConfirmArchive(null)} aria-label="Close">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
               <h3>{isArchived ? 'Unarchive' : 'Archive'} workout?</h3>
               <p>
                 {isArchived
@@ -458,6 +461,9 @@ export function WorkoutsView() {
         return (
           <div className="confirm-overlay" onClick={() => setConfirmDelete(null)}>
             <div className="confirm-sheet" onClick={e => e.stopPropagation()}>
+              <button className="sheet-close-btn" onClick={() => setConfirmDelete(null)} aria-label="Close">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5"><line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" /></svg>
+              </button>
               <h3>Delete workout?</h3>
               <p>"{w?.name}" will be permanently removed. This cannot be undone.</p>
               <div className="confirm-actions">

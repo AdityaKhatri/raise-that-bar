@@ -5,6 +5,7 @@ import { getAllWorkouts, putWorkout } from '../../db/workouts';
 import { getAllSessions } from '../../db/sessions';
 import { getAllExercises } from '../../db/exercises';
 import { Modal } from '../../components/Modal/Modal';
+import { BottomSheet } from '../../components/BottomSheet/BottomSheet';
 import { SearchBar } from '../../components/SearchBar/SearchBar';
 import { Topbar } from '../../components/Topbar/Topbar';
 import { WorkoutEditor } from '../Workouts/WorkoutsView';
@@ -280,34 +281,11 @@ export function PlanView() {
         </Modal>
 
         {/* Create choice sheet: Build manually or Import with AI */}
-        {createChoiceOpen && (
-          <div
-            style={{ position: 'fixed', inset: 0, zIndex: 400, display: 'flex', flexDirection: 'column', justifyContent: 'flex-end' }}
-            onClick={() => setCreateChoiceOpen(false)}
-          >
-            <div style={{ position: 'absolute', inset: 0, background: 'rgba(0,0,0,0.45)' }} />
-            <div
-              style={{
-                position: 'relative',
-                background: 'var(--surface)',
-                borderRadius: '12px 12px 0 0',
-                paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 8px)',
-                overflow: 'hidden',
-              }}
-              onClick={e => e.stopPropagation()}
-            >
-              <div style={{ display: 'flex', justifyContent: 'center', padding: '12px 0 4px' }}>
-                <div style={{ width: 36, height: 4, borderRadius: 2, background: 'var(--line-2)' }} />
-              </div>
+        <BottomSheet open={createChoiceOpen} onClose={() => setCreateChoiceOpen(false)} title="New Workout">
               <button
                 onClick={() => { setCreateChoiceOpen(false); createNewWorkout(); }}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: 16,
-                  padding: '16px 20px', background: 'none', border: 'none',
-                  borderBottom: '1px solid var(--line-1)', color: 'var(--fg)',
-                  fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: '0.04em',
-                  cursor: 'pointer', textAlign: 'left',
-                }}
+                className="bottom-sheet-action"
+                style={{ borderBottom: '1px solid var(--line-1)' }}
               >
                 <span style={{ color: 'var(--fg-mute)' }}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
@@ -319,13 +297,7 @@ export function PlanView() {
               </button>
               <button
                 onClick={() => { setCreateChoiceOpen(false); setAiImporting(true); }}
-                style={{
-                  width: '100%', display: 'flex', alignItems: 'center', gap: 16,
-                  padding: '16px 20px', background: 'none', border: 'none',
-                  color: 'var(--fg)',
-                  fontFamily: 'var(--mono)', fontSize: 14, letterSpacing: '0.04em',
-                  cursor: 'pointer', textAlign: 'left',
-                }}
+                className="bottom-sheet-action"
               >
                 <span style={{ color: 'var(--fg-mute)' }}>
                   <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
@@ -336,9 +308,7 @@ export function PlanView() {
                 Import with AI
               </button>
               <div style={{ height: 8 }} />
-            </div>
-          </div>
-        )}
+        </BottomSheet>
 
         {aiImporting && (
           <AIImportSheet

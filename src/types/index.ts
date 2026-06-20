@@ -110,6 +110,7 @@ export interface Session {
   unplanned: boolean;
   groups: SessionGroup[];
   notes: string;
+  estimatedKcal?: number | null;
   updatedAt: number;
 }
 

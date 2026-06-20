@@ -307,7 +307,26 @@ a { color: var(--accent); text-decoration: none; }
   border: 1px solid var(--line);
   border-radius: 6px;
   padding: 24px;
+  position: relative;
 }
+
+.sheet-close-btn {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  width: 28px;
+  height: 28px;
+  display: grid;
+  place-items: center;
+  background: transparent;
+  border: 1px solid var(--line);
+  border-radius: 50%;
+  color: var(--fg-mute);
+  cursor: pointer;
+  z-index: 1;
+  transition: border-color 120ms ease, color 120ms ease;
+}
+.sheet-close-btn:hover { border-color: var(--fg-dim); color: var(--fg); }
 
 .confirm-sheet h3 { margin-bottom: 14px; font-size: 20px; }
 .confirm-sheet p  { color: var(--fg-mute); font-size: 15px; margin-bottom: 24px; }
@@ -672,7 +691,15 @@ a { color: var(--accent); text-decoration: none; }
 .lib-row { display: flex; align-items: center; justify-content: space-between; padding: 16px 20px; border-bottom: 1px solid var(--line); cursor: pointer; }
 .lib-row:hover { background: var(--surface); }
 .lib-name { font-weight: 600; font-size: 16px; margin-bottom: 4px; }
-.lib-tags { display: flex; gap: 6px; }
+.lib-tags { display: flex; gap: 3px; }
+.lib-tags .chip {
+  height: 22px;
+  padding: 0 8px;
+  font-size: 9px;
+  border-radius: 11px;
+  border-width: 1px;
+  letter-spacing: 0.06em;
+}
 .lib-arrow { color: var(--fg-mute); font-family: var(--mono); font-size: 14px; }
 
 /* ─── Editor Inputs ──────────────────────────────────────────────────────────── */

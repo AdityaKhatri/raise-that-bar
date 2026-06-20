@@ -318,6 +318,15 @@ export function AnalyzeView({ onBack }: { onBack: () => void }) {
     return normaliseScores(analysis.muscles);
   }, [analysis]);
 
+  const avgBurn14d = useMemo(() => {
+    const cutoff = new Date();
+    cutoff.setDate(cutoff.getDate() - 14);
+    const cutoffStr = cutoff.toISOString().slice(0, 10);
+    const recent = sessions.filter(s => s.finishedAt && s.date >= cutoffStr);
+    const totalBurn = recent.reduce((sum, s) => sum + (s.estimatedKcal ?? 0), 0);
+    return totalBurn > 0 ? Math.round(totalBurn / 14) : 0;
+  }, [sessions]);
+
   // Copy prompt
   const handleCopy = useCallback(async () => {
     if (!analysis) return;
@@ -483,6 +492,12 @@ export function AnalyzeView({ onBack }: { onBack: () => void }) {
                   </span>
                   <span className="cardio-stat__label">per week</span>
                 </div>
+                {avgBurn14d > 0 && (
+                  <div className="cardio-stat">
+                    <span className="cardio-stat__value">~{avgBurn14d}</span>
+                    <span className="cardio-stat__label">kcal/day (14d)</span>
+                  </div>
+                )}
               </div>
             </section>
 
