@@ -252,15 +252,10 @@ body {
   flex-direction: column;
   overflow: hidden;
   background: var(--bg);
-  /* 100svh = small viewport (browser UI fully visible) — safe default.
-     In standalone PWA mode switch to 100dvh so the full screen is used. */
-  height: 100svh;
-}
-
-@media (display-mode: standalone) {
-  #root {
-    height: 100dvh;
-  }
+  height: 100dvh;
+  /* Fallback for browsers without dvh support */
+  height: 100vh;
+  height: 100dvh;
 }
 
 /* ─── Typography ─────────────────────────────────────────────────────────────── */
@@ -596,6 +591,7 @@ a { color: var(--accent); text-decoration: none; }
   flex-direction: column;
   gap: 10px;
   padding: 28px 20px 0;
+  padding-bottom: env(safe-area-inset-bottom, 0px);
   margin-top: 8px;
   border-top: 1px solid var(--line);
 }
