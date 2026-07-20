@@ -383,3 +383,76 @@ ex_yoga_boat_pose,Boat Pose (Navasana),core,legs,bodyweight,yoga,,sec
 ex_yoga_reclining_big_toe,Reclining Big Toe Pose (Supta Padangusthasana),legs,back,bodyweight,yoga,,sec
 ex_yoga_corpse_pose,Corpse Pose (Savasana),full-body,,bodyweight,yoga,,min
 ex_meditation,Meditation,full-body,,bodyweight,meditation,,min
+ex_short_foot,Short Foot (Arch Activation),legs,,bodyweight,muscle,,sec
+ex_toe_yoga,Toe Yoga,legs,,bodyweight,stretching,,
+ex_single_leg_balance,Single-Leg Balance,legs,core,bodyweight,muscle,,sec
+ex_single_leg_balance_eyes,Single-Leg Balance Eyes Closed,legs,core,bodyweight,muscle,,sec
+ex_single_leg_balance_head,Single-Leg Balance with Head Turns,legs,core,bodyweight,muscle,,sec
+ex_knee_to_wall_ankle,Knee-to-Wall Ankle Mobility,legs,,bodyweight,stretching,,
+ex_banded_ankle_mob,Banded Ankle Mobilization,legs,,band,stretching,,sec
+ex_bent_knee_calf_raise,Bent-Knee Calf Raise,legs,,bodyweight,muscle,,
+ex_hip_90_hold,90-90 Hip Hold,legs,core,bodyweight,stretching,,sec
+ex_frog_rock_back,Frog Rock Back,legs,glutes,bodyweight,stretching,,
+ex_hip_flexor_stretch,Hip Flexor Stretch,legs,core,bodyweight,stretching,,sec
+ex_adductor_rock_back,Adductor Rock Back,legs,,bodyweight,stretching,,
+ex_side_lying_hip_abduction,Side-Lying Hip Abduction,glutes,legs,bodyweight,muscle,,
+ex_side_lying_hip_adduction,Side-Lying Hip Adduction,legs,,bodyweight,muscle,,
+ex_spanish_squat_iso,Spanish Squat (Isometric Hold),legs,,band,muscle,,sec
+ex_terminal_knee_ext,Terminal Knee Extension (Band),legs,,band,muscle,,
+ex_step_down,Step-Down,legs,"glutes,core",bodyweight,muscle,,
+ex_reverse_step_up,Reverse Step-Up,legs,glutes,bodyweight,muscle,,
+ex_star_excursion,Single-Leg Reach (Star Excursion),legs,"core,glutes",bodyweight,muscle,,
+ex_lateral_hop,Lateral Hop,legs,core,bodyweight,muscle,,
+ex_foam_roll_quads,Foam Roll Quads,legs,,other,recovery,,sec
+ex_foam_roll_it_band,Foam Roll IT Band,legs,,other,recovery,,sec
+ex_foam_roll_hamstrings,Foam Roll Hamstrings,legs,,other,recovery,,sec
+ex_foam_roll_glutes,Foam Roll Glutes,glutes,,other,recovery,,sec
+ex_foam_roll_upper_back,Foam Roll Upper Back,back,,other,recovery,,sec
+ex_foam_roll_lats,Foam Roll Lats,back,,other,recovery,,sec
+ex_foam_roll_calves,Foam Roll Calves,legs,,other,recovery,,sec
+ex_foam_roll_hip_flexors,Foam Roll Hip Flexors,legs,,other,recovery,,sec
+ex_lacrosse_foot,Lacrosse Ball Foot Release,legs,,other,recovery,,sec
+ex_lacrosse_glute,Lacrosse Ball Glute Release,glutes,,other,recovery,,sec
+ex_lacrosse_pec,Lacrosse Ball Pec Release,chest,,other,recovery,,sec
+ex_lacrosse_thoracic,Lacrosse Ball Thoracic Spine,back,,other,recovery,,sec
+ex_skin_rolling,Skin Rolling (Fascial Mobilization),full-body,,bodyweight,recovery,,sec
+ex_fascial_bounce,Fascial Bounce (Elastic Rebound),full-body,,bodyweight,recovery,,
+ex_rope_flow_figure8,Rope Flow (Figure 8),full-body,"shoulders,core",other,recovery,,min
+ex_tensegrity_rocking,Tensegrity Rocking (Quadruped),full-body,core,bodyweight,recovery,,
+ex_fascial_warmup_swing,Fascial Warm-Up (Full Body Swing),full-body,,bodyweight,recovery,,
+ex_myofascial_ball_roll,Myofascial Ball Roll (Full Body),full-body,,other,recovery,,sec
+ex_percussion_glutes,Percussion Massage (Glutes),glutes,,other,recovery,,sec
+ex_percussion_back,Percussion Massage (Back),back,,other,recovery,,sec
+ex_australian_pullup,Australian Pull-Up,back,biceps,bodyweight,muscle,,
+ex_negative_pullup,Negative Pull-Up,back,biceps,bodyweight,muscle,,
+ex_bw_squat,Bodyweight Squat,legs,glutes,bodyweight,muscle,,
+ex_bw_sumo_squat,Sumo Bodyweight Squat,legs,glutes,bodyweight,muscle,,
+ex_squat_iso_hold,Squat Hold (ISO),legs,"glutes,core",bodyweight,muscle,,sec
+ex_reverse_lunge_bw,Reverse Lunge (Bodyweight),legs,glutes,bodyweight,muscle,,
+ex_step_up_bw,Step-Up (Bodyweight),legs,glutes,bodyweight,muscle,,
+ex_glute_bridge_bw,Glute Bridge,glutes,"legs,core",bodyweight,muscle,,
+ex_donkey_kick,Donkey Kick,glutes,,bodyweight,muscle,,
+ex_fire_hydrant,Fire Hydrant,glutes,legs,bodyweight,muscle,,
+ex_good_morning_bw,Good Morning (Bodyweight),back,"glutes,legs",bodyweight,muscle,,
+ex_superman_hold,Superman Hold,back,glutes,bodyweight,muscle,,sec
+ex_prone_hip_extension,Prone Hip Extension,glutes,back,bodyweight,muscle,,
+ex_hollow_body_rock,Hollow Body Rock,core,,bodyweight,muscle,,
+ex_arch_body_rock,Arch Body Rock,back,glutes,bodyweight,muscle,,
+ex_tuck_planche_hold,Tuck Planche Hold,shoulders,"core,arms",bodyweight,muscle,,sec
+ex_skin_the_cat,Skin the Cat,back,shoulders,bodyweight,muscle,,
+ex_tuck_jump,Tuck Jump,legs,core,bodyweight,muscle,,
+ex_split_jump,Split Jump (Scissor Lunge),legs,"glutes,core",bodyweight,muscle,,
+ex_lateral_bound,Lateral Bound,legs,glutes,bodyweight,muscle,,
+ex_skater_hop,Skater Hop,legs,"glutes,core",bodyweight,muscle,,
+ex_spiderman_pushup,Spiderman Push-Up,chest,"core,triceps",bodyweight,muscle,,
+ex_t_pushup,T Push-Up,chest,"shoulders,core",bodyweight,muscle,,
+ex_staggered_pushup,Staggered Push-Up,chest,triceps,bodyweight,muscle,,
+ex_commando_pullup,Commando Pull-Up,back,biceps,bodyweight,muscle,,
+ex_typewriter_pullup,Typewriter Pull-Up,back,biceps,bodyweight,muscle,,
+ex_chair_squat,Chair Squat,legs,glutes,bodyweight,muscle,,
+ex_wall_pushup,Wall Push-Up,chest,"shoulders,triceps",bodyweight,muscle,,
+ex_kneeling_pushup,Kneeling Push-Up,chest,"triceps,shoulders",bodyweight,muscle,,
+ex_stair_calf_raise,Stair Calf Raise,legs,,bodyweight,muscle,,
+ex_towel_row,Towel Row,back,biceps,bodyweight,muscle,,
+ex_sofa_leg_curl,Sofa Leg Curl,legs,,bodyweight,muscle,,
+ex_backpack_deadlift,Backpack Deadlift,legs,"back,glutes",other,muscle,,
